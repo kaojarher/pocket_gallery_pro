@@ -520,7 +520,7 @@
             <img id="ic-speaker" src="https://img.icons8.com/ios-filled/100/ffffff/speaker.png">
         </a-assets>
         <a-entity id="cameraRig" position="0 0 0" rotation="0 45 0">
-            <a-entity id="userView" camera="fov: 60" position="0 1.6 0" look-controls="pointerLockEnabled: false"></a-entity>
+            <a-entity id="userView" camera="fov: 60" position="0 1.6 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false; touchEnabled: true"></a-entity>
         </a-entity>
         <a-sky color="#0c0d12"></a-sky>
         <a-ambient-light color="#ffffff" intensity="0.9"></a-ambient-light>
@@ -1256,10 +1256,22 @@ function compileAndRender3D() {
     showToast('✅ 3D 場景已更新');
 }
 
-function executeMove(tx,tz) {
-    document.getElementById('cameraRig').setAttribute('animation',{
-        property:'position', to:`${tx} 0 ${tz}`, dur:1200, easing:'cubicBezier(0.25,1,0.5,1)'
-    });
+function executeMove(tx, tz) {
+    const rig = document.getElementById('cameraRig');
+    const start = rig.getAttribute('position');
+    const sx = start.x, sz = start.z;
+    const dx = tx - sx, dz = tz - sz;
+    const dur = 1200;
+    const t0 = performance.now();
+    function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+    function step(now) {
+        const t = Math.min((now - t0) / dur, 1);
+        const e = easeInOut(t);
+        // 只更新 position，完全不動 rotation，保留使用者視角
+        rig.setAttribute('position', { x: sx + dx*e, y: 0, z: sz + dz*e });
+        if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
 }
 
 function pauseVoice() { window.speechSynthesis.pause(); }
@@ -1305,7 +1317,7 @@ body{overflow:hidden;background:#0c0d12;}
 <div id="room-nav"></div>
 <a-scene vr-mode-ui="enabled:false" cursor="rayOrigin:mouse" raycaster="objects:.clickable">
 <a-assets><img id="arrow" src="https://i.imgur.com/vHdfS9g.png"><img id="ic-speaker" src="https://img.icons8.com/ios-filled/100/ffffff/speaker.png"></a-assets>
-<a-entity id="rig" position="0 0 0" rotation="0 45 0"><a-entity camera="fov:60" position="0 1.6 0" look-controls="pointerLockEnabled:false"><\/a-entity><\/a-entity>
+<a-entity id="rig" position="0 0 0" rotation="0 45 0"><a-entity camera="fov:60" position="0 1.6 0" look-controls="pointerLockEnabled:false; magicWindowTrackingEnabled:false; touchEnabled:true"><\/a-entity><\/a-entity>
 <a-sky color="#0c0d12"><\/a-sky><a-ambient-light color="#fff" intensity="0.9"><\/a-ambient-light>
 <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200" color="#18191d"><\/a-plane>
 <a-plane position="0 5.2 0" rotation="90 0 0" width="200" height="200" color="#6e5d4f"><\/a-plane>
@@ -1317,7 +1329,7 @@ const SM=9,WW=9,WH=5.2;
 let curU=null;
 function renderCanvas(html,fs,fc,ta,cb){const cv=document.getElementById('hidden-canvas');const ctx=cv.getContext('2d');ctx.clearRect(0,0,1024,768);const d='<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Microsoft JhengHei,sans-serif;padding:40px;color:'+fc+';font-size:'+fs+'px;line-height:1.5;text-align:'+ta+';">'+html+'<\/div><\/foreignObject><\/svg>';const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(d);img.onload=()=>{ctx.drawImage(img,0,0);cb(cv.toDataURL());};}
 function buildNav(){const nav=document.getElementById('room-nav');nav.innerHTML='';Object.keys(db).forEach(k=>{const b=document.createElement('button');b.className='nav-btn';b.textContent='展廳'+k+(db[k].customName?'·'+db[k].customName:'');b.onclick=()=>{const r=db[k];move((r.gridX-2)*SM,(r.gridY-1)*SM);document.getElementById('room-label').textContent=db[k].customName||k;};nav.appendChild(b);});}
-function move(x,z){document.getElementById('rig').setAttribute('animation',{property:'position',to:x+' 0 '+z,dur:1200,easing:'cubicBezier(0.25,1,0.5,1)'});}
+function move(x,z){const rig=document.getElementById('rig');const s=rig.getAttribute('position');const sx=s.x,sz=s.z,dx=x-sx,dz=z-sz,dur=1200,t0=performance.now();function ei(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}function step(now){const t=Math.min((now-t0)/dur,1);rig.setAttribute('position',{x:sx+dx*ei(t),y:0,z:sz+dz*ei(t)});if(t<1)requestAnimationFrame(step);}requestAnimationFrame(step);}
 function build(){const w=document.getElementById('world');w.innerHTML='';Object.keys(db).forEach(k=>{const r=db[k];const rx=(r.gridX-2)*SM,rz=(r.gridY-1)*SM,wc=r.roomColor||'#f5f6f8',wt=r.roomTexture||'';const wc2=[{dir:'north',pos:'0 '+(WH/2)+' -4.5',rot:'0 0 0'},{dir:'south',pos:'0 '+(WH/2)+' 4.5',rot:'0 180 0'},{dir:'west',pos:'-4.5 '+(WH/2)+' 0',rot:'0 90 0'},{dir:'east',pos:'4.5 '+(WH/2)+' 0',rot:'0 -90 0'}];
 wc2.forEach(c=>{const wd=r.walls[c.dir]||{type:'image'};const pts=c.pos.split(' ');const ax=rx+parseFloat(pts[0]),ay=parseFloat(pts[1]),az=rz+parseFloat(pts[2]);
 if(wd.type==='door'){const de=document.createElement('a-entity');de.setAttribute('position',ax+' 0 '+az);de.setAttribute('rotation',c.rot);[{x:'-3.25',w:'2.5'},{x:'3.25',w:'2.5'}].forEach(p=>{const lp=document.createElement('a-box');lp.setAttribute('position',p.x+' '+ay+' 0');lp.setAttribute('width',p.w);lp.setAttribute('height',WH);lp.setAttribute('depth','0.1');lp.setAttribute('color',wc);if(wt)lp.setAttribute('src',wt);de.appendChild(lp);});const tb=document.createElement('a-box');tb.setAttribute('position','0 4.45 0');tb.setAttribute('width','4.0');tb.setAttribute('height','1.5');tb.setAttribute('depth','0.1');tb.setAttribute('color',wc);if(wt)tb.setAttribute('src',wt);de.appendChild(tb);w.appendChild(de);}
