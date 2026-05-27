@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Gallery PRO — 展覽規劃工具</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <style>
+        :root {
+            --g-blue: #1a73e8; --g-blue-hover: #1557b0; --g-green: #137333; --g-red: #d93025;
+            --g-yellow: #f9ab00; --bg-light: #f8f9fa; --border-color: #dadce0;
+            --text-dark: #202124; --text-gray: #5f6368; --panel-width: 500px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Google Sans", "Microsoft JhengHei", Roboto, sans-serif; }
+        body { display: flex; height: 100vh; background: #fff; overflow: hidden; color: var(--text-dark); }
+
+        /* ═══ 左側面板 ═══ */
+        #cms-panel { width: var(--panel-width); height: 100%; border-right: 1px solid var(--border-color); background: #fff; display: flex; flex-direction: column; z-index: 10; box-shadow: 4px 0 20px rgba(0,0,0,0.07); }
+
+        .cms-header { padding: 14px 20px; border-bottom: 1px solid var(--border-color); background: var(--bg-light); }
+        .cms-header-top { display: flex; justify-content: space-between; align-items: center; }
+        .cms-header h2 { font-size: 16px; font-weight: 600; color: var(--g-blue); }
+        .header-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+        .badge-blue { background: #e8f0fe; color: var(--g-blue); }
+        .badge-green { background: #e6f4ea; color: var(--g-green); }
+        .badge-yellow { background: #fef9e7; color: #b06000; }
+
+        /* Tab 導覽 */
+        .tab-bar { display: flex; border-bottom: 1px solid var(--border-color); background: #fff; }
+        .tab-btn { flex: 1; padding: 10px 4px; border: none; background: none; font-size: 11px; font-weight: 500; color: var(--text-gray); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn:hover { color: var(--g-blue); background: var(--bg-light); }
+        .tab-btn.active { color: var(--g-blue); border-bottom-color: var(--g-blue); }
+        .tab-panel { display: none; flex: 1; overflow-y: auto; padding: 16px; flex-direction: column; gap: 14px; }
+        .tab-panel.active { display: flex; }
+
+        /* 通用表單元件 */
+        .section-title { font-size: 12px; font-weight: 600; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--g-blue); padding-left: 8px; margin-bottom: 8px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 11px; font-weight: 500; color: var(--text-gray); }
+        .form-group input, .form-group textarea, .form-group select { padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 12px; outline: none; background: #fff; font-family: inherit; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--g-blue); box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+        .wall-sub-panel { border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; background: var(--bg-light); }
+        .sub-section { background: #fff; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; }
+
+        /* 格子地圖 */
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; background: var(--bg-light); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .grid-cell { aspect-ratio: 1; background: #fff; border: 1px dashed #c1c4c8; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s; position: relative; flex-direction: column; gap: 2px; }
+        .grid-cell:hover { background: #f1f3f4; border-color: var(--text-gray); }
+        .grid-cell.active-room { background: #e8f0fe; border: 2px solid var(--g-blue); color: var(--g-blue); }
+        .grid-cell.selected-editing { box-shadow: 0 0 0 3px var(--g-yellow) !important; border-color: var(--g-yellow) !important; }
+        .grid-cell .room-emoji { font-size: 14px; }
+        .grid-cell .room-label { font-size: 9px; color: var(--text-gray); }
+
+        /* 展廳列表 */
+        .room-list { display: flex; flex-direction: column; gap: 6px; }
+        .room-card { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; position: relative; }
+        .room-card:hover { border-color: var(--g-blue); background: #f8fbff; }
+        .room-card.active-card { border-color: var(--g-blue); background: #e8f0fe; }
+        .room-card-color { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+        .room-card-info { flex: 1; }
+        .room-card-name { font-size: 13px; font-weight: 500; }
+        .room-card-sub { font-size: 11px; color: var(--text-gray); margin-top: 2px; }
+        .room-card-actions { display: flex; gap: 4px; }
+        .icon-btn { background: none; border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; color: var(--text-gray); transition: all 0.15s; }
+        .icon-btn:hover { border-color: var(--g-blue); color: var(--g-blue); background: #e8f0fe; }
+        .icon-btn.danger:hover { border-color: var(--g-red); color: var(--g-red); background: #fce8e6; }
+
+        /* 圖片預覽 */
+        #img-preview-box { width: 100%; height: 110px; border: 1px solid var(--border-color); border-radius: 6px; object-fit: contain; display: none; background: var(--bg-light); margin-top: 4px; }
+        #img-preview-box.visible { display: block; }
+        .img-status { font-size: 11px; padding: 3px 8px; border-radius: 10px; margin-top: 4px; display: none; }
+        .img-status.ok { background: #e6f4ea; color: var(--g-green); display: inline-block; }
+        .img-status.err { background: #fce8e6; color: var(--g-red); display: inline-block; }
+
+        /* 展品詮釋資料 */
+        .artwork-meta { background: #fff; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-top: 8px; }
+        .artwork-meta-title { font-size: 11px; font-weight: 600; color: var(--text-gray); margin-bottom: 8px; }
+
+        /* 展品清單 */
+        .artwork-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .artwork-table th { background: var(--bg-light); padding: 7px 10px; text-align: left; font-weight: 500; border-bottom: 1px solid var(--border-color); color: var(--text-gray); }
+        .artwork-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        .artwork-table tr:hover td { background: #f8fbff; }
+        .artwork-table .thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 3px; border: 1px solid var(--border-color); }
+        .artwork-table .no-thumb { width: 36px; height: 36px; background: var(--bg-light); border-radius: 3px; border: 1px solid var(--border-color); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+
+        /* 動線規劃 */
+        .route-builder { display: flex; flex-direction: column; gap: 8px; }
+        .route-stop { display: flex; align-items: center; gap: 8px; background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; }
+        .route-stop-num { width: 22px; height: 22px; background: var(--g-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; }
+        .route-stop-name { flex: 1; font-size: 12px; font-weight: 500; }
+        .route-stop-note { font-size: 11px; color: var(--text-gray); border: none; background: none; outline: none; flex: 2; font-family: inherit; }
+        .route-arrow { text-align: center; color: var(--g-blue); font-size: 14px; padding: 2px 0; }
+
+        /* 備忘錄 */
+        .note-area { width: 100%; min-height: 120px; resize: vertical; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; line-height: 1.6; font-family: inherit; outline: none; }
+        .note-area:focus { border-color: var(--g-blue); }
+        .note-timestamp { font-size: 10px; color: var(--text-gray); margin-top: 4px; }
+
+        /* 展覽基本資訊 */
+        .info-card { background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; }
+
+        /* 底部按鈕 */
+        .cms-footer { padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; background: var(--bg-light); flex-shrink: 0; }
+        .btn-row { display: flex; gap: 8px; }
+        .btn { padding: 9px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--g-blue); color: white; }
+        .btn-primary:hover { background: var(--g-blue-hover); }
+        .btn-secondary { background: #e8eaed; color: var(--text-dark); }
+        .btn-secondary:hover { background: #d4d6d9; }
+        .btn-green { background: var(--g-green); color: white; flex: 1; }
+        .btn-green:hover { background: #0f5b28; }
+        .btn-red { background: #fce8e6; color: var(--g-red); }
+        .btn-red:hover { background: #f5c6c3; }
+        .btn-icon { padding: 9px 10px; }
+        .btn-full { width: 100%; display: block; }
+
+        /* 3D 視窗 */
+        #viewport-container { flex: 1; height: 100%; position: relative; }
+        #room-indicator-overlay { position: absolute; top: 16px; left: 16px; background: rgba(32,33,36,0.85); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 99; pointer-events: none; backdrop-filter: blur(4px); }
+        #audio-controller { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.95); padding: 7px 14px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; z-index: 99; border: 1px solid var(--border-color); }
+        #audio-status { font-size: 11px; color: var(--text-dark); font-weight: 500; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .audio-btn { background: none; border: none; cursor: pointer; padding: 4px; font-size: 13px; display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 26px; height: 26px; }
+        .audio-btn:hover { background: rgba(0,0,0,0.06); }
+
+        /* 通知 toast */
+        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: #303134; color: white; padding: 10px 20px; border-radius: 8px; font-size: 12px; z-index: 9999; opacity: 0; transition: all 0.3s; pointer-events: none; }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* 匯入面板 */
+        .import-zone { border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .import-zone:hover { border-color: var(--g-blue); background: #f8fbff; }
+        .import-zone.dragover { border-color: var(--g-blue); background: #e8f0fe; }
+
+        #hidden-canvas-encoder { display: none; }
+
+        /* 滾動條美化 */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c1c4c8; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<canvas id="hidden-canvas-encoder" width="1024" height="768"></canvas>
+<div id="toast"></div>
+
+<div id="cms-panel">
+    <div class="cms-header">
+        <div class="cms-header-top">
+            <h2>🏛️ Pocket Gallery PRO</h2>
+            <span style="font-size:10px; color:var(--text-gray);">策展規劃工具 v2.0</span>
+        </div>
+        <div class="header-badges">
+            <span class="badge badge-blue">展廳管理</span>
+            <span class="badge badge-green">動線規劃</span>
+            <span class="badge badge-yellow">展品清單</span>
+        </div>
+    </div>
+
+    <!-- Tab 導覽列 -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('tab-info')">📋 展覽</button>
+        <button class="tab-btn" onclick="switchTab('tab-layout')">🗺️ 佈局</button>
+        <button class="tab-btn" onclick="switchTab('tab-room')">🏠 展廳</button>
+        <button class="tab-btn" onclick="switchTab('tab-artworks')">🖼️ 清單</button>
+        <button class="tab-btn" onclick="switchTab('tab-route')">🚶 動線</button>
+        <button class="tab-btn" onclick="switchTab('tab-notes')">📝 備忘</button>
+    </div>
+
+    <!-- ① 展覽基本資訊 -->
+    <div id="tab-info" class="tab-panel active">
+        <div class="section-title">展覽基本資料</div>
+        <div class="info-card">
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>展覽名稱</label>
+                <input type="text" id="expo-name" placeholder="例如：光影之間 — 當代藝術聯展" value="The Grand Founders Gallery">
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>主辦單位</label>
+                <input type="text" id="expo-organizer" placeholder="主辦機構名稱">
+            </div>
+            <div class="form-row" style="margin-bottom:10px;">
+                <div class="form-group">
+                    <label>開幕日期</label>
+                    <input type="date" id="expo-start">
+                </div>
+                <div class="form-group">
+                    <label>閉幕日期</label>
+                    <input type="date" id="expo-end">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>展覽地點</label>
+                <input type="text" id="expo-venue" placeholder="展覽場地名稱與地址">
+            </div>
+            <div class="form-group">
+                <label>展覽簡介</label>
+                <textarea id="expo-desc" rows="3" placeholder="展覽主旨、策展理念、精選描述..."></textarea>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">統計總覽</div>
+        <div id="expo-stats" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center;">
+            <div style="background:var(--bg-light); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                <div id="stat-rooms" style="font-size:24px; font-weight:600; color:var(--g-blue);">7</div>
+                <div style="font-size:11px; color:var(--text-gray); margin-top:2px;">展廳數</div>
+            </div>
+            <div style="background:var(--bg-light); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                <div id="stat-artworks" style="font-size:24px; font-weight:600; color:var(--g-green);">0</div>
+                <div style="font-size:11px; color:var(--text-gray); margin-top:2px;">展品數</div>
+            </div>
+            <div style="background:var(--bg-light); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                <div id="stat-doors" style="font-size:24px; font-weight:600; color:var(--g-yellow);">0</div>
+                <div style="font-size:11px; color:var(--text-gray); margin-top:2px;">通道數</div>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">匯入備份</div>
+        <div class="import-zone" id="import-zone" onclick="document.getElementById('json-file-input').click()">
+            <div style="font-size:24px; margin-bottom:6px;">📂</div>
+            <div style="font-size:12px; font-weight:500; color:var(--text-dark);">點擊或拖曳 JSON 備份檔</div>
+            <div style="font-size:11px; color:var(--text-gray); margin-top:4px;">支援從「備份 JSON」匯出的檔案</div>
+        </div>
+        <input type="file" id="json-file-input" accept=".json" style="display:none" onchange="importJSON(this)">
+    </div>
+
+    <!-- ② 空間佈局 -->
+    <div id="tab-layout" class="tab-panel">
+        <div class="section-title">
+            <span>空間矩陣 (5 × 5 Grid)</span>
+            <span id="current-edit-node" style="color:var(--g-yellow); font-size:11px;">編輯中：未選</span>
+        </div>
+        <div class="grid-container" id="space-grid"></div>
+
+        <div style="font-size:11px; color:var(--text-gray); background:var(--bg-light); padding:8px 12px; border-radius:6px; line-height:1.6;">
+            💡 點擊格子可移動當前展廳位置。<br>
+            🟡 金框 = 正在編輯的展廳。🔵 藍框 = 其他展廳。<br>
+            展廳位置決定 3D 空間中的實際坐標。
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">展廳管理</div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <button class="btn btn-primary" style="flex:1" onclick="addNewRoom()">➕ 新增展廳</button>
+            <button class="btn btn-secondary" onclick="duplicateCurrentRoom()">📋 複製展廳</button>
+        </div>
+        <div class="room-list" id="room-list"></div>
+    </div>
+
+    <!-- ③ 展廳細部設定 -->
+    <div id="tab-room" class="tab-panel">
+        <div class="section-title">
+            <span>② 展廳與環境設置</span>
+            <span id="room-edit-label" style="color:var(--g-blue); font-size:11px;"></span>
+        </div>
+        <div class="sub-section">
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>選取欲配置的展廳</label>
+                <select id="room-selector" onchange="switchEditingRoom(this.value)">
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>展廳自訂名稱</label>
+                <input type="text" id="room-custom-name" placeholder="例如：開國元勳專區" oninput="saveCurrentInputsToMemory()">
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>展廳主題副標題</label>
+                <input type="text" id="room-subtitle" placeholder="例如：1776–1800 美國建國時代" oninput="saveCurrentInputsToMemory()">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>牆體底色</label>
+                    <input type="color" id="room-color-input" value="#f5f6f8" style="height:36px; padding:2px; cursor:pointer;" oninput="saveCurrentInputsToMemory()">
+                </div>
+                <div class="form-group">
+                    <label>壁紙貼圖 URL</label>
+                    <input type="text" id="room-texture-input" placeholder="可選填..." oninput="saveCurrentInputsToMemory()">
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">語音導覽</div>
+        <div class="sub-section">
+            <div class="form-group">
+                <label>TTS 語音導覽文稿</label>
+                <textarea id="voice-content" rows="3" placeholder="點擊聲音柱播放的語音內容..." oninput="saveCurrentInputsToMemory()"></textarea>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">③ 牆面配置</div>
+        <div class="wall-sub-panel">
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>選擇牆面方位</label>
+                <select id="wall-selector" onchange="loadWallData()">
+                    <option value="north">前牆面 (North)</option>
+                    <option value="south">後牆面 (South)</option>
+                    <option value="west">左牆面 (West)</option>
+                    <option value="east">右牆面 (East)</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>牆面功能類型</label>
+                <select id="wall-type" onchange="toggleWallTypeFields(this.value)">
+                    <option value="image">🖼️ 掛畫模式（典雅相框）</option>
+                    <option value="text">📝 文字牆（支援 HTML 標籤）</option>
+                    <option value="door">🚪 廊門通道（打通相鄰展廳）</option>
+                </select>
+            </div>
+
+            <div id="type-image-fields">
+                <div class="form-group" style="margin-bottom:8px;">
+                    <label>圖片網址 (URL)</label>
+                    <div style="display:flex; gap:6px;">
+                        <input type="text" id="wall-img" placeholder="https://..." style="flex:1" oninput="onImgUrlChange(this.value)">
+                        <button class="btn btn-secondary btn-icon" title="預覽" onclick="previewImage()">👁</button>
+                    </div>
+                    <img id="img-preview-box" alt="圖片預覽">
+                    <span class="img-status" id="img-status"></span>
+                </div>
+
+                <div class="artwork-meta">
+                    <div class="artwork-meta-title">📋 展品詮釋資料（Metadata）</div>
+                    <div class="form-group" style="margin-bottom:8px;">
+                        <label>作品名稱 / 標籤（支援 HTML）</label>
+                        <input type="text" id="wall-desc" placeholder="例如：<b>喬治·華盛頓</b>肖像畫" oninput="saveCurrentInputsToMemory()">
+                    </div>
+                    <div class="form-row" style="margin-bottom:8px;">
+                        <div class="form-group">
+                            <label>藝術家 / 作者</label>
+                            <input type="text" id="meta-artist" placeholder="姓名" oninput="saveCurrentInputsToMemory()">
+                        </div>
+                        <div class="form-group">
+                            <label>創作年份</label>
+                            <input type="text" id="meta-year" placeholder="1796" oninput="saveCurrentInputsToMemory()">
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:8px;">
+                        <div class="form-group">
+                            <label>媒材技法</label>
+                            <input type="text" id="meta-medium" placeholder="油彩、畫布" oninput="saveCurrentInputsToMemory()">
+                        </div>
+                        <div class="form-group">
+                            <label>典藏機構</label>
+                            <input type="text" id="meta-collection" placeholder="博物館名稱" oninput="saveCurrentInputsToMemory()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>作品說明（策展論述）</label>
+                        <textarea id="meta-notes" rows="2" placeholder="此作品的背景故事、藝術詮釋..." oninput="saveCurrentInputsToMemory()"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div id="type-text-fields" style="display:none;">
+                <div class="form-group">
+                    <label>文字牆內容（支援 &lt;br&gt;、&lt;b&gt;、&lt;h1&gt; 等標籤）</label>
+                    <textarea id="wall-panel-text" rows="6" placeholder="輸入內容..." oninput="saveCurrentInputsToMemory()"></textarea>
+                </div>
+            </div>
+
+            <div id="type-door-fields" style="display:none; font-size:11px; color:var(--g-green); background:#e6f4ea; padding:8px; border-radius:4px; margin-top:4px;">
+                🚪 此牆已設為廊門通道，與相鄰展廳無縫串聯。
+            </div>
+        </div>
+    </div>
+
+    <!-- ④ 展品清單 -->
+    <div id="tab-artworks" class="tab-panel">
+        <div class="section-title">
+            <span>全展品清單</span>
+            <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="exportArtworkCSV()">匯出 CSV</button>
+            </div>
+        </div>
+        <div style="font-size:11px; color:var(--text-gray); margin-bottom:8px;">自動彙整所有展廳中的圖片牆展品</div>
+        <div id="artwork-list-container">
+            <table class="artwork-table">
+                <thead>
+                    <tr>
+                        <th style="width:44px;">縮圖</th>
+                        <th>作品名稱</th>
+                        <th>展廳</th>
+                        <th>藝術家</th>
+                        <th>年份</th>
+                    </tr>
+                </thead>
+                <tbody id="artwork-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ⑤ 動線規劃 -->
+    <div id="tab-route" class="tab-panel">
+        <div class="section-title">
+            <span>訪客動線設計</span>
+            <button class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="exportRoutePlan()">匯出動線</button>
+        </div>
+        <div style="font-size:11px; color:var(--text-gray); margin-bottom:8px; background:var(--bg-light); padding:8px 10px; border-radius:6px;">
+            🚶 設計訪客建議參觀路線，並為每站加上說明提示。<br>
+            拖曳可調整順序，按 ⊕ 新增停靠點。
+        </div>
+        <div class="route-builder" id="route-builder"></div>
+        <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="addRouteStop()">⊕ 新增停靠點</button>
+
+        <div class="section-title" style="margin-top:16px;">整體導覽估時</div>
+        <div class="form-row" style="gap:8px;">
+            <div class="form-group">
+                <label>一般參觀（分鐘）</label>
+                <input type="number" id="route-time-normal" placeholder="60" min="5" max="480">
+            </div>
+            <div class="form-group">
+                <label>深度參觀（分鐘）</label>
+                <input type="number" id="route-time-deep" placeholder="120" min="5" max="480">
+            </div>
+        </div>
+    </div>
+
+    <!-- ⑥ 策展備忘錄 -->
+    <div id="tab-notes" class="tab-panel">
+        <div class="section-title">
+            <span>策展工作備忘錄</span>
+            <button class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="clearNotes()">清除</button>
+        </div>
+        <div class="form-group">
+            <label>工作筆記（僅供內部規劃，不會出現在展覽中）</label>
+            <textarea class="note-area" id="curator-notes" placeholder="待辦事項、聯絡人、審核進度、版權確認狀態..." oninput="saveNotes()"></textarea>
+            <div class="note-timestamp" id="note-saved-time"></div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">快速核取清單</div>
+        <div id="checklist-container" style="display:flex; flex-direction:column; gap:6px;">
+        </div>
+        <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="addChecklistItem()">⊕ 新增核取項目</button>
+
+        <div class="section-title" style="margin-top:16px;">版本歷史紀錄</div>
+        <div id="version-history" style="font-size:11px; color:var(--text-gray); max-height:120px; overflow-y:auto;"></div>
+    </div>
+</div>
+
+<!-- 底部操作按鈕 -->
+<div style="position:fixed; bottom:0; left:0; width:var(--panel-width); z-index:20;">
+    <div class="cms-footer">
+        <div class="btn-row">
+            <button class="btn btn-secondary" onclick="exportJSONData()">💾 備份 JSON</button>
+            <button class="btn btn-primary" style="flex:1" onclick="compileAndRender3D()">🔄 即時套用 3D</button>
+        </div>
+        <button class="btn btn-green btn-full" onclick="generateStandaloneHTML()">📦 輸出獨立展覽檔案</button>
+    </div>
+</div>
+
+<!-- 3D 視窗 -->
+<div id="viewport-container">
+    <div id="room-indicator-overlay">當前位置：3D 展廳</div>
+    <div id="audio-controller">
+        <span id="audio-status">🔊 靜音中</span>
+        <button class="audio-btn" title="暫停" onclick="pauseVoice()">⏸️</button>
+        <button class="audio-btn" title="繼續播放" onclick="resumeVoice()">▶️</button>
+        <button class="audio-btn" title="停止" onclick="stopVoice()">⏹</button>
+    </div>
+    <a-scene embedded vr-mode-ui="enabled: false" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+        <a-assets>
+            <img id="arrow" src="https://i.imgur.com/vHdfS9g.png">
+            <img id="ic-speaker" src="https://img.icons8.com/ios-filled/100/ffffff/speaker.png">
+        </a-assets>
+        <a-entity id="cameraRig" position="0 0 0" rotation="0 45 0">
+            <a-entity id="userView" camera="fov: 60" position="0 1.6 0" look-controls="pointerLockEnabled: false"></a-entity>
+        </a-entity>
+        <a-sky color="#0c0d12"></a-sky>
+        <a-ambient-light color="#ffffff" intensity="0.9"></a-ambient-light>
+        <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200" color="#18191d"></a-plane>
+        <a-plane position="0 5.2 0" rotation="90 0 0" width="200" height="200" color="#6e5d4f"></a-plane>
+        <a-entity id="dynamic-gallery-world"></a-entity>
+    </a-scene>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// 資料庫
+// ══════════════════════════════════════════════
+let galleryDatabase = {
+    A: { roomColor:"#f5f6f8", roomTexture:"", gridX:2, gridY:0, customName:"開國元勳專區", subtitle:"1776–1800", voice:"歡迎來到展廳 A：開國元勳。",
+         walls:{ north:{type:"image", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Gilbert_Stuart_Williamstown_Portrait_of_George_Washington.jpg/431px-Gilbert_Stuart_Williamstown_Portrait_of_George_Washington.jpg", desc:"<b>喬治·華盛頓</b><br><span style='font-size:16px;color:#aaa;'>吉爾伯特·斯圖爾特 (1796)</span>", artist:"吉爾伯特·斯圖爾特", year:"1796", medium:"油彩、畫布", collection:"美國國家肖像館", metaNotes:""}, south:{type:"door"}, west:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, east:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""} } },
+    B: { roomColor:"#eef2f5", roomTexture:"", gridX:1, gridY:1, customName:"獨立宣言專區", subtitle:"1776 費城", voice:"您已進入展廳 B：獨立宣言展區。",
+         walls:{ north:{type:"image",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Thomas_Jefferson_by_Rembrandt_Peale_1800.jpg/440px-Thomas_Jefferson_by_Rembrandt_Peale_1800.jpg",desc:"<b>湯瑪斯·傑佛遜</b>",artist:"倫勃朗·皮爾",year:"1800",medium:"油彩",collection:"白宮藏",metaNotes:""}, south:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, west:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, east:{type:"door"} } },
+    C: { roomColor:"#f5f6f8", roomTexture:"", gridX:2, gridY:1, customName:"中央核心大廳", subtitle:"通道中心", voice:"這裡是核心中央大廳 C。",
+         walls:{ north:{type:"door"}, south:{type:"door"}, west:{type:"door"}, east:{type:"door"} } },
+    D: { roomColor:"#f5f6f8", roomTexture:"", gridX:3, gridY:1, customName:"自由之聲專區", subtitle:"科學與外交", voice:"此處為展廳 D：自由之聲。",
+         walls:{ north:{type:"image",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/BenFranklinDuplessis.jpg/440px-BenFranklinDuplessis.jpg",desc:"<b>班傑明·富蘭克林</b>",artist:"約瑟夫·杜普萊西斯",year:"1778",medium:"油彩",collection:"賓州美術學院",metaNotes:""}, south:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, west:{type:"door"}, east:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""} } },
+    E: { roomColor:"#f5f6f8", roomTexture:"", gridX:1, gridY:2, customName:"憲法起草大廳", subtitle:"聯邦體制", voice:"歡迎蒞臨展廳 E：憲法起草大廳。",
+         walls:{ north:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, south:{type:"image",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Alexander_Hamilton_portrait_by_John_Trumbull_1806.jpg/440px-Alexander_Hamilton_portrait_by_John_Trumbull_1806.jpg",desc:"<b>亞歷山大·漢密爾頓</b>",artist:"約翰·特朗布爾",year:"1806",medium:"油彩",collection:"大都會博物館",metaNotes:""}, west:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, east:{type:"door"} } },
+    F: { roomColor:"#f5f6f8", roomTexture:"", gridX:2, gridY:2, customName:"新共和國長廊", subtitle:"行政架構", voice:"您正身處展廳 F：新共和國長廊。",
+         walls:{ north:{type:"door"}, south:{type:"image",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/John_Adams%2C_by_John_Trumbull.jpg/440px-John_Adams%2C_by_John_Trumbull.jpg",desc:"<b>約翰·亞當斯</b>",artist:"約翰·特朗布爾",year:"1792",medium:"油彩",collection:"哈佛大學藏",metaNotes:""}, west:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, east:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""} } },
+    G: { roomColor:"#ebdcd0", roomTexture:"", gridX:3, gridY:2, customName:"歷史傳承專區", subtitle:"特展總論", voice:"最後是展廳 G：歷史傳承專區。",
+         walls:{ north:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, south:{type:"text",text:"<h1>歷史傳承特展總論</h1><p>本特展聚合了美國建國初期最具核心歷史價值的珍貴先驅文獻與藝術畫作。</p>"}, west:{type:"door"}, east:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""} } }
+};
+
+let currentRoomCode = 'A';
+const GRID_SIZE = 5;
+const SCALE_MULTIPLIER = 9.0;
+const WALL_WIDTH = 9.0;
+const WALL_HEIGHT = 5.2;
+let currentUtterance = null;
+let currentFov = 60;
+let routeStops = [];
+let checklist = [];
+let versionHistory = [];
+let nextRoomId = 'H';
+
+// ══════════════════════════════════════════════
+// UI 通用工具
+// ══════════════════════════════════════════════
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function switchTab(id) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.currentTarget.classList.add('active');
+
+    if (id === 'tab-artworks') refreshArtworkList();
+    if (id === 'tab-layout') { build2DGridSystem(); buildRoomList(); }
+    if (id === 'tab-info') updateStats();
+}
+
+// ══════════════════════════════════════════════
+// 展廳管理
+// ══════════════════════════════════════════════
+function getRoomIds() { return Object.keys(galleryDatabase); }
+
+function buildRoomSelector() {
+    const sel = document.getElementById('room-selector');
+    sel.innerHTML = '';
+    getRoomIds().forEach(key => {
+        const r = galleryDatabase[key];
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `展廳 ${key}：${r.customName || key}`;
+        if (key === currentRoomCode) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function buildRoomList() {
+    const container = document.getElementById('room-list');
+    container.innerHTML = '';
+    getRoomIds().forEach(key => {
+        const r = galleryDatabase[key];
+        const card = document.createElement('div');
+        card.className = 'room-card' + (key === currentRoomCode ? ' active-card' : '');
+        card.innerHTML = `
+            <div class="room-card-color" style="background:${r.roomColor || '#f5f6f8'};"></div>
+            <div class="room-card-info">
+                <div class="room-card-name">展廳 ${key}：${r.customName || '（未命名）'}</div>
+                <div class="room-card-sub">${r.subtitle || ''} &nbsp;|&nbsp; 位置 (${r.gridX},${r.gridY})</div>
+            </div>
+            <div class="room-card-actions">
+                <button class="icon-btn" onclick="selectRoomForEdit('${key}')">✏️</button>
+                <button class="icon-btn danger" onclick="deleteRoom('${key}')" title="刪除">🗑</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function selectRoomForEdit(key) {
+    switchEditingRoom(key);
+    document.querySelectorAll('.tab-btn')[2].click();
+    showToast(`已切換至展廳 ${key}：${galleryDatabase[key].customName || key}`);
+}
+
+function addNewRoom() {
+    const keys = getRoomIds();
+    let id = nextRoomId;
+    while(galleryDatabase[id]) {
+        id = String.fromCharCode(id.charCodeAt(0) + 1);
+    }
+    nextRoomId = String.fromCharCode(id.charCodeAt(0) + 1);
+
+    // 找空位
+    let gx = 0, gy = 0;
+    outer: for(let y=0; y<GRID_SIZE; y++) {
+        for(let x=0; x<GRID_SIZE; x++) {
+            if(!Object.values(galleryDatabase).find(r=>r.gridX===x&&r.gridY===y)) { gx=x; gy=y; break outer; }
+        }
+    }
+    galleryDatabase[id] = {
+        roomColor:"#f5f6f8", roomTexture:"", gridX:gx, gridY:gy,
+        customName:"新展廳", subtitle:"", voice:"",
+        walls:{ north:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, south:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, west:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, east:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""} }
+    };
+    buildRoomSelector();
+    build2DGridSystem();
+    buildRoomList();
+    switchEditingRoom(id);
+    updateStats();
+    showToast(`已新增展廳 ${id}`);
+    document.querySelectorAll('.tab-btn')[2].click();
+}
+
+function duplicateCurrentRoom() {
+    const src = galleryDatabase[currentRoomCode];
+    const copy = JSON.parse(JSON.stringify(src));
+    let id = nextRoomId;
+    while(galleryDatabase[id]) id = String.fromCharCode(id.charCodeAt(0)+1);
+    nextRoomId = String.fromCharCode(id.charCodeAt(0)+1);
+    let gx=0,gy=0;
+    outer:for(let y=0;y<GRID_SIZE;y++) for(let x=0;x<GRID_SIZE;x++) {
+        if(!Object.values(galleryDatabase).find(r=>r.gridX===x&&r.gridY===y)){gx=x;gy=y;break outer;}
+    }
+    copy.gridX=gx; copy.gridY=gy; copy.customName=(src.customName||'展廳')+' (複製)';
+    galleryDatabase[id]=copy;
+    buildRoomSelector(); build2DGridSystem(); buildRoomList(); updateStats();
+    showToast(`已複製展廳 ${currentRoomCode} → ${id}`);
+}
+
+function deleteRoom(key) {
+    if(Object.keys(galleryDatabase).length <= 1) { showToast('❌ 至少保留一個展廳'); return; }
+    if(!confirm(`確定刪除展廳 ${key}：${galleryDatabase[key].customName || key}？`)) return;
+    delete galleryDatabase[key];
+    if(currentRoomCode === key) currentRoomCode = Object.keys(galleryDatabase)[0];
+    buildRoomSelector(); build2DGridSystem(); buildRoomList();
+    switchEditingRoom(currentRoomCode);
+    updateStats();
+    showToast(`已刪除展廳 ${key}`);
+}
+
+// ══════════════════════════════════════════════
+// 網格地圖
+// ══════════════════════════════════════════════
+function build2DGridSystem() {
+    const container = document.getElementById('space-grid');
+    container.innerHTML = '';
+    for(let y=0; y<GRID_SIZE; y++) {
+        for(let x=0; x<GRID_SIZE; x++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            const bound = Object.keys(galleryDatabase).find(k => galleryDatabase[k].gridX===x && galleryDatabase[k].gridY===y);
+            if(bound) {
+                cell.classList.add('active-room');
+                cell.innerHTML = `<span class="room-emoji">🏠</span><span>${bound}</span>`;
+                if(bound === currentRoomCode) cell.classList.add('selected-editing');
+            }
+            cell.onclick = function() {
+                if(bound && bound !== currentRoomCode) return;
+                galleryDatabase[currentRoomCode].gridX = x;
+                galleryDatabase[currentRoomCode].gridY = y;
+                build2DGridSystem();
+            };
+            container.appendChild(cell);
+        }
+    }
+    document.getElementById('current-edit-node').textContent = `編輯中：展廳 ${currentRoomCode}`;
+}
+
+// ══════════════════════════════════════════════
+// 展廳切換與表單讀寫
+// ══════════════════════════════════════════════
+function switchEditingRoom(code) {
+    saveCurrentInputsToMemory();
+    currentRoomCode = code;
+    const r = galleryDatabase[code];
+    document.getElementById('room-selector').value = code;
+    document.getElementById('room-custom-name').value = r.customName || '';
+    document.getElementById('room-subtitle').value = r.subtitle || '';
+    document.getElementById('room-color-input').value = r.roomColor || '#f5f6f8';
+    document.getElementById('room-texture-input').value = r.roomTexture || '';
+    document.getElementById('voice-content').value = r.voice || '';
+    document.getElementById('room-edit-label').textContent = `展廳 ${code}`;
+    document.getElementById('current-edit-node').textContent = `編輯中：展廳 ${code}`;
+    loadWallData();
+    build2DGridSystem();
+    buildRoomList();
+}
+
+function loadWallData() {
+    const dir = document.getElementById('wall-selector').value;
+    const w = (galleryDatabase[currentRoomCode].walls[dir]) || {type:'image'};
+    document.getElementById('wall-type').value = w.type || 'image';
+    document.getElementById('wall-img').value = w.img || '';
+    document.getElementById('wall-desc').value = w.desc || '';
+    document.getElementById('wall-panel-text').value = w.text || '';
+    document.getElementById('meta-artist').value = w.artist || '';
+    document.getElementById('meta-year').value = w.year || '';
+    document.getElementById('meta-medium').value = w.medium || '';
+    document.getElementById('meta-collection').value = w.collection || '';
+    document.getElementById('meta-notes').value = w.metaNotes || '';
+    toggleWallTypeFields(w.type || 'image');
+    clearImgPreview();
+    if(w.img) onImgUrlChange(w.img);
+}
+
+function toggleWallTypeFields(type) {
+    document.getElementById('type-image-fields').style.display = type==='image'?'block':'none';
+    document.getElementById('type-text-fields').style.display = type==='text'?'block':'none';
+    document.getElementById('type-door-fields').style.display = type==='door'?'block':'none';
+    saveCurrentInputsToMemory();
+}
+
+function saveCurrentInputsToMemory() {
+    const r = galleryDatabase[currentRoomCode];
+    if(!r) return;
+    r.customName = document.getElementById('room-custom-name').value;
+    r.subtitle = document.getElementById('room-subtitle').value;
+    r.voice = document.getElementById('voice-content').value;
+    r.roomColor = document.getElementById('room-color-input').value;
+    r.roomTexture = document.getElementById('room-texture-input').value;
+    const dir = document.getElementById('wall-selector').value;
+    const type = document.getElementById('wall-type').value;
+    if (type === 'image') {
+        r.walls[dir] = {
+            type,
+            img: document.getElementById('wall-img').value,
+            desc: document.getElementById('wall-desc').value,
+            text: '',
+            artist: document.getElementById('meta-artist').value,
+            year: document.getElementById('meta-year').value,
+            medium: document.getElementById('meta-medium').value,
+            collection: document.getElementById('meta-collection').value,
+            metaNotes: document.getElementById('meta-notes').value
+        };
+    } else if (type === 'text') {
+        r.walls[dir] = {
+            type, text: document.getElementById('wall-panel-text').value,
+            img: '', desc: '', artist: '', year: '', medium: '', collection: '', metaNotes: ''
+        };
+    } else {
+        r.walls[dir] = { type };
+    }
+    buildRoomSelector();
+}
+
+// ══════════════════════════════════════════════
+// 圖片預覽與驗證
+// ══════════════════════════════════════════════
+let imgDebounceTimer = null;
+function onImgUrlChange(url) {
+    saveCurrentInputsToMemory();
+    clearTimeout(imgDebounceTimer);
+    if(!url.trim()) { clearImgPreview(); return; }
+    imgDebounceTimer = setTimeout(() => previewImage(), 800);
+}
+
+function clearImgPreview() {
+    document.getElementById('img-preview-box').classList.remove('visible');
+    document.getElementById('img-status').className = 'img-status';
+    document.getElementById('img-status').textContent = '';
+}
+
+function previewImage() {
+    const url = document.getElementById('wall-img').value.trim();
+    if(!url) { showToast('請先填入圖片網址'); return; }
+    const img = document.getElementById('img-preview-box');
+    const status = document.getElementById('img-status');
+    img.src = url;
+    img.onload = () => {
+        img.classList.add('visible');
+        status.className = 'img-status ok';
+        status.textContent = `✅ 圖片載入成功 (${img.naturalWidth}×${img.naturalHeight}px)`;
+    };
+    img.onerror = () => {
+        img.classList.remove('visible');
+        status.className = 'img-status err';
+        status.textContent = '❌ 圖片無法載入，請確認網址是否正確';
+    };
+}
+
+// ══════════════════════════════════════════════
+// 統計
+// ══════════════════════════════════════════════
+function updateStats() {
+    const rooms = Object.values(galleryDatabase);
+    let artworks = 0, doors = 0;
+    rooms.forEach(r => {
+        ['north','south','west','east'].forEach(dir => {
+            const w = r.walls[dir];
+            if(w && w.type==='image' && w.img) artworks++;
+            if(w && w.type==='door') doors++;
+        });
+    });
+    document.getElementById('stat-rooms').textContent = rooms.length;
+    document.getElementById('stat-artworks').textContent = artworks;
+    document.getElementById('stat-doors').textContent = doors;
+}
+
+// ══════════════════════════════════════════════
+// 展品清單
+// ══════════════════════════════════════════════
+function refreshArtworkList() {
+    const tbody = document.getElementById('artwork-table-body');
+    tbody.innerHTML = '';
+    let count = 0;
+    Object.keys(galleryDatabase).forEach(key => {
+        const r = galleryDatabase[key];
+        ['north','south','west','east'].forEach(dir => {
+            const w = r.walls[dir];
+            if(w && w.type==='image' && w.img) {
+                count++;
+                const dirLabel = {north:'前牆',south:'後牆',west:'左牆',east:'右牆'}[dir];
+                const tr = document.createElement('tr');
+                const cleanDesc = (w.desc||'').replace(/<[^>]+>/g,'') || '（無標題）';
+                tr.innerHTML = `
+                    <td>${w.img ? `<img class="thumb" src="${w.img}" onerror="this.style.display='none'">` : '<span class="no-thumb">🖼️</span>'}</td>
+                    <td><strong>${cleanDesc}</strong><br><span style="color:var(--text-gray);font-size:10px;">${w.medium||''} ${w.year?'·'+w.year:''}</span></td>
+                    <td><span style="font-size:10px; background:var(--bg-light); padding:2px 6px; border-radius:4px;">${key}·${dirLabel}</span></td>
+                    <td style="font-size:11px;">${w.artist||'—'}</td>
+                    <td style="font-size:11px;">${w.year||'—'}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        });
+    });
+    if(count===0) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-gray); padding:20px;">尚無展品（請在展廳設定中加入圖片牆）</td></tr>';
+}
+
+function exportArtworkCSV() {
+    saveCurrentInputsToMemory();
+    const expoName = document.getElementById('expo-name').value || '展覽';
+    let csv = '\uFEFF作品名稱,藝術家,年份,媒材,典藏機構,展廳,牆面,圖片URL,策展備注\n';
+    Object.keys(galleryDatabase).forEach(key => {
+        const r = galleryDatabase[key];
+        ['north','south','west','east'].forEach(dir => {
+            const w = r.walls[dir];
+            if(w && w.type==='image' && w.img) {
+                const dirLabel = {north:'前牆',south:'後牆',west:'左牆',east:'右牆'}[dir];
+                const name = (w.desc||'').replace(/<[^>]+>/g,'') || '（無標題）';
+                csv += `"${name}","${w.artist||''}","${w.year||''}","${w.medium||''}","${w.collection||''}","展廳${key}·${r.customName||''}","${dirLabel}","${w.img||''}","${(w.metaNotes||'').replace(/\n/g,' ')}"\n`;
+            }
+        });
+    });
+    downloadBlob(csv, `${expoName}_展品清單.csv`, 'text/csv;charset=utf-8');
+    showToast('✅ 展品清單已匯出為 CSV');
+}
+
+// ══════════════════════════════════════════════
+// 動線規劃
+// ══════════════════════════════════════════════
+function buildRouteUI() {
+    const container = document.getElementById('route-builder');
+    container.innerHTML = '';
+    routeStops.forEach((stop, i) => {
+        if(i>0) { const arrow = document.createElement('div'); arrow.className='route-arrow'; arrow.textContent='↓'; container.appendChild(arrow); }
+        const el = document.createElement('div');
+        el.className = 'route-stop';
+        el.innerHTML = `
+            <div class="route-stop-num">${i+1}</div>
+            <select style="font-size:12px; border:1px solid var(--border-color); border-radius:4px; padding:4px 6px; outline:none;" onchange="routeStops[${i}].roomKey=this.value">
+                ${Object.keys(galleryDatabase).map(k=>`<option value="${k}" ${stop.roomKey===k?'selected':''}>展廳 ${k}：${galleryDatabase[k].customName||k}</option>`).join('')}
+            </select>
+            <input class="route-stop-note" value="${stop.note||''}" placeholder="停留建議..." oninput="routeStops[${i}].note=this.value">
+            <button class="icon-btn danger" onclick="removeRouteStop(${i})">✕</button>
+        `;
+        container.appendChild(el);
+    });
+}
+
+function addRouteStop() {
+    routeStops.push({ roomKey: Object.keys(galleryDatabase)[0], note:'' });
+    buildRouteUI();
+}
+
+function removeRouteStop(i) {
+    routeStops.splice(i,1);
+    buildRouteUI();
+}
+
+function exportRoutePlan() {
+    const expoName = document.getElementById('expo-name').value || '展覽';
+    const timeNormal = document.getElementById('route-time-normal').value || '—';
+    const timeDeep = document.getElementById('route-time-deep').value || '—';
+    let txt = `${expoName} — 訪客動線規劃\n${'='.repeat(40)}\n`;
+    txt += `建議參觀時間：一般 ${timeNormal} 分鐘 / 深度 ${timeDeep} 分鐘\n\n`;
+    routeStops.forEach((stop,i) => {
+        const r = galleryDatabase[stop.roomKey];
+        txt += `${i+1}. 展廳 ${stop.roomKey}：${r?.customName||stop.roomKey}\n`;
+        if(stop.note) txt += `   備注：${stop.note}\n`;
+    });
+    downloadBlob(txt, `${expoName}_動線規劃.txt`, 'text/plain;charset=utf-8');
+    showToast('✅ 動線規劃已匯出');
+}
+
+// ══════════════════════════════════════════════
+// 備忘錄
+// ══════════════════════════════════════════════
+function saveNotes() {
+    const t = new Date().toLocaleString('zh-TW');
+    document.getElementById('note-saved-time').textContent = `最後儲存：${t}`;
+}
+
+function clearNotes() {
+    if(!confirm('確定清除所有備忘內容？')) return;
+    document.getElementById('curator-notes').value = '';
+    showToast('備忘錄已清除');
+}
+
+function addChecklistItem() {
+    const container = document.getElementById('checklist-container');
+    const id = Date.now();
+    checklist.push({id, text:'', done:false});
+    const el = document.createElement('div');
+    el.id = 'chk-'+id;
+    el.style.cssText = 'display:flex; align-items:center; gap:8px; background:var(--bg-light); padding:7px 10px; border-radius:6px; border:1px solid var(--border-color);';
+    el.innerHTML = `
+        <input type="checkbox" onchange="this.nextElementSibling.style.textDecoration=this.checked?'line-through':'none'">
+        <input type="text" placeholder="核取項目..." style="flex:1; border:none; background:none; font-size:12px; outline:none;" oninput="">
+        <button class="icon-btn danger" style="padding:3px 7px;" onclick="document.getElementById('chk-${id}').remove()">✕</button>
+    `;
+    container.appendChild(el);
+}
+
+// ══════════════════════════════════════════════
+// JSON 匯出 / 匯入
+// ══════════════════════════════════════════════
+function exportJSONData() {
+    saveCurrentInputsToMemory();
+    const payload = {
+        _meta: { exportedAt: new Date().toISOString(), tool:'Pocket Gallery PRO v2.0' },
+        expoInfo: {
+            name: document.getElementById('expo-name').value,
+            organizer: document.getElementById('expo-organizer').value,
+            start: document.getElementById('expo-start').value,
+            end: document.getElementById('expo-end').value,
+            venue: document.getElementById('expo-venue').value,
+            desc: document.getElementById('expo-desc').value,
+        },
+        galleryDatabase,
+        routeStops,
+        curatorNotes: document.getElementById('curator-notes').value
+    };
+    const name = (document.getElementById('expo-name').value || 'gallery') + '_backup.json';
+    downloadBlob(JSON.stringify(payload, null, 2), name, 'application/json');
+    addVersionHistory('備份 JSON');
+    showToast('✅ JSON 備份已下載');
+}
+
+function importJSON(input) {
+    const file = input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if(data.galleryDatabase) {
+                if(!confirm('匯入將覆蓋目前所有展廳資料，確定繼續？')) return;
+                galleryDatabase = data.galleryDatabase;
+                if(data.expoInfo) {
+                    document.getElementById('expo-name').value = data.expoInfo.name||'';
+                    document.getElementById('expo-organizer').value = data.expoInfo.organizer||'';
+                    document.getElementById('expo-start').value = data.expoInfo.start||'';
+                    document.getElementById('expo-end').value = data.expoInfo.end||'';
+                    document.getElementById('expo-venue').value = data.expoInfo.venue||'';
+                    document.getElementById('expo-desc').value = data.expoInfo.desc||'';
+                }
+                if(data.routeStops) routeStops = data.routeStops;
+                if(data.curatorNotes) document.getElementById('curator-notes').value = data.curatorNotes;
+                currentRoomCode = Object.keys(galleryDatabase)[0];
+                buildRoomSelector(); build2DGridSystem(); buildRoomList();
+                switchEditingRoom(currentRoomCode);
+                updateStats();
+                showToast('✅ JSON 備份匯入成功');
+            } else {
+                showToast('❌ 檔案格式不符，無法匯入');
+            }
+        } catch(err) {
+            showToast('❌ JSON 解析失敗：' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+// 拖曳匯入
+const importZone = document.getElementById('import-zone');
+importZone.addEventListener('dragover', e => { e.preventDefault(); importZone.classList.add('dragover'); });
+importZone.addEventListener('dragleave', () => importZone.classList.remove('dragover'));
+importZone.addEventListener('drop', e => {
+    e.preventDefault(); importZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if(file && file.name.endsWith('.json')) {
+        const fakeInput = { files:[file] };
+        importJSON(fakeInput);
+    } else showToast('請拖曳 .json 格式的備份檔');
+});
+
+function addVersionHistory(action) {
+    const t = new Date().toLocaleString('zh-TW');
+    versionHistory.unshift(`${t}：${action}`);
+    if(versionHistory.length>20) versionHistory.pop();
+    const container = document.getElementById('version-history');
+    container.innerHTML = versionHistory.map(v=>`<div style="padding:4px 0; border-bottom:1px solid #f0f0f0;">${v}</div>`).join('');
+}
+
+function downloadBlob(content, filename, type) {
+    const blob = new Blob([content], {type});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// ══════════════════════════════════════════════
+// Canvas 中文渲染
+// ══════════════════════════════════════════════
+function renderHtmlToCanvasTexture(htmlText, fontSize, fontColor, textAlign, callback, bgColor) {
+    // 每次建立獨立的 off-screen canvas，避免多個非同步渲染共用同一個 canvas 造成競態污染
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024; canvas.height = 768;
+    const ctx = canvas.getContext('2d');
+    if(bgColor) { ctx.fillStyle = bgColor; ctx.fillRect(0,0,1024,768); }
+    const data = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768">
+        <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'Microsoft JhengHei','微軟正黑體',sans-serif;padding:40px;color:${fontColor};font-size:${fontSize}px;line-height:1.5;text-align:${textAlign};">
+                ${htmlText}
+            </div>
+        </foreignObject>
+    </svg>`;
+    const img = new Image();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
+    img.onload = function() { ctx.drawImage(img,0,0); callback(canvas.toDataURL()); };
+}
+
+// ══════════════════════════════════════════════
+// 3D 渲染
+// ══════════════════════════════════════════════
+function compileAndRender3D() {
+    saveCurrentInputsToMemory();
+    const world = document.getElementById('dynamic-gallery-world');
+    world.innerHTML = '';
+
+    Object.keys(galleryDatabase).forEach(roomKey => {
+        const room = galleryDatabase[roomKey];
+        const rx = (room.gridX-2)*SCALE_MULTIPLIER;
+        const rz = (room.gridY-1)*SCALE_MULTIPLIER;
+        const wColor = room.roomColor || '#f5f6f8';
+        const wTxt = room.roomTexture || '';
+
+        const wallConfig = [
+            {dir:'north', pos:`0 ${WALL_HEIGHT/2} -4.5`, rot:'0 0 0'},
+            {dir:'south', pos:`0 ${WALL_HEIGHT/2} 4.5`, rot:'0 180 0'},
+            {dir:'west', pos:`-4.5 ${WALL_HEIGHT/2} 0`, rot:'0 90 0'},
+            {dir:'east', pos:`4.5 ${WALL_HEIGHT/2} 0`, rot:'0 -90 0'}
+        ];
+
+        wallConfig.forEach(c => {
+            const wData = room.walls[c.dir] || {type:'image'};
+            const parts = c.pos.split(' ');
+            const wx = rx + parseFloat(parts[0]);
+            const wy = parseFloat(parts[1]);
+            const wz = rz + parseFloat(parts[2]);
+
+            if(wData.type === 'door') {
+                const dEnt = document.createElement('a-entity');
+                dEnt.setAttribute('position', `${wx} 0 ${wz}`);
+                dEnt.setAttribute('rotation', c.rot);
+                [{x:'-3.25',w:'2.5'},{x:'3.25',w:'2.5'}].forEach(p => {
+                    const lp = document.createElement('a-box');
+                    lp.setAttribute('position',`${p.x} ${wy} 0`);
+                    lp.setAttribute('width',p.w); lp.setAttribute('height',WALL_HEIGHT); lp.setAttribute('depth','0.1'); lp.setAttribute('color',wColor);
+                    if(wTxt) lp.setAttribute('src',wTxt);
+                    dEnt.appendChild(lp);
+                });
+                const tb = document.createElement('a-box');
+                tb.setAttribute('position','0 4.45 0');
+                tb.setAttribute('width','4.0'); tb.setAttribute('height','1.5'); tb.setAttribute('depth','0.1'); tb.setAttribute('color',wColor);
+                if(wTxt) tb.setAttribute('src',wTxt);
+                dEnt.appendChild(tb);
+                world.appendChild(dEnt);
+            } else {
+                const wBox = document.createElement('a-box');
+                wBox.setAttribute('position',`${wx} ${wy} ${wz}`);
+                wBox.setAttribute('rotation',c.rot);
+                wBox.setAttribute('width',WALL_WIDTH); wBox.setAttribute('height',WALL_HEIGHT); wBox.setAttribute('depth','0.1'); wBox.setAttribute('color',wColor);
+                if(wTxt) wBox.setAttribute('src',wTxt);
+
+                const bb = document.createElement('a-box');
+                bb.setAttribute('position',`0 -${wy-0.05} 0.06`);
+                bb.setAttribute('width',WALL_WIDTH); bb.setAttribute('height','0.12'); bb.setAttribute('depth','0.02'); bb.setAttribute('color','#111111');
+                wBox.appendChild(bb);
+
+                if(wData.type === 'image' && wData.img) {
+                    // 組合完整詮釋資料標籤
+                    const metaLines = [];
+                    if(wData.desc) metaLines.push(`<div style="font-size:28px; font-weight:bold; margin-bottom:6px;">${wData.desc}</div>`);
+                    const subParts = [];
+                    if(wData.artist) subParts.push(wData.artist);
+                    if(wData.year) subParts.push(wData.year);
+                    if(subParts.length) metaLines.push(`<div style="font-size:22px; color:#cccccc;">${subParts.join('　·　')}</div>`);
+                    if(wData.medium) metaLines.push(`<div style="font-size:19px; color:#aaaaaa; margin-top:4px;">媒材：${wData.medium}</div>`);
+                    if(wData.collection) metaLines.push(`<div style="font-size:19px; color:#aaaaaa;">典藏：${wData.collection}</div>`);
+                    if(wData.metaNotes) metaLines.push(`<div style="font-size:17px; color:#888888; margin-top:8px; border-top:1px solid #555; padding-top:8px;">${wData.metaNotes}</div>`);
+                    const hasAnyMeta = metaLines.length > 0;
+                    const labelHeight = wData.metaNotes ? 1.2 : (wData.medium || wData.collection ? 0.9 : 0.5);
+
+                    const fr = document.createElement('a-box');
+                    fr.setAttribute('position','0 0.3 0.06');
+                    fr.setAttribute('width','2.2'); fr.setAttribute('height','2.8'); fr.setAttribute('depth','0.08'); fr.setAttribute('color','#1e1610');
+                    const pl = document.createElement('a-plane');
+                    pl.setAttribute('position','0 0.15 0.045');
+                    pl.setAttribute('width','2.0'); pl.setAttribute('height','2.3'); pl.setAttribute('src',wData.img);
+                    fr.appendChild(pl);
+                    if(hasAnyMeta) {
+                        // 深色標籤底板
+                        const labelBg = document.createElement('a-box');
+                        labelBg.setAttribute('position', `0 ${-1.05 - labelHeight/2 + 0.05} 0.05`);
+                        labelBg.setAttribute('width','2.18'); labelBg.setAttribute('height', String(labelHeight + 0.1)); labelBg.setAttribute('depth','0.02');
+                        labelBg.setAttribute('color','#111111');
+                        fr.appendChild(labelBg);
+
+                        const dp = document.createElement('a-plane');
+                        dp.setAttribute('position', `0 ${-1.05 - labelHeight/2 + 0.05} 0.065`);
+                        dp.setAttribute('width','2.0'); dp.setAttribute('height', String(labelHeight));
+                        dp.setAttribute('material','shader: flat; transparent: true;');
+                        const labelHtml = `<div style="padding:12px 16px; line-height:1.5;">${metaLines.join('')}</div>`;
+                        renderHtmlToCanvasTexture(labelHtml, 20, '#ffffff', 'left', du => dp.setAttribute('src', du));
+                        fr.appendChild(dp);
+                    }
+                    wBox.appendChild(fr);
+                } else if(wData.type === 'text' && wData.text) {
+                    const tp = document.createElement('a-plane');
+                    tp.setAttribute('position','0 0.2 0.06');
+                    tp.setAttribute('width','6.5'); tp.setAttribute('height','4.0');
+                    tp.setAttribute('material','shader: flat; transparent: true;');
+                    renderHtmlToCanvasTexture(wData.text, 28, '#ffffff', 'center', du => tp.setAttribute('src', du));
+                    wBox.appendChild(tp);
+                }
+                world.appendChild(wBox);
+            }
+        });
+
+        // 聲音柱
+        const pEnt = document.createElement('a-entity');
+        pEnt.setAttribute('position',`${rx} 0 ${rz-2.0}`);
+        pEnt.setAttribute('animation',`property:position; to:${rx} 0.08 ${rz-2.0}; dir:alternate; dur:2000; loop:true; easing:easeInOutQuad`);
+        const cy = document.createElement('a-cylinder');
+        cy.setAttribute('color','#6ba4e8'); cy.setAttribute('height','1.8'); cy.setAttribute('radius','0.04');
+        cy.setAttribute('material','emissive:#6ba4e8; emissiveIntensity:0.6; opacity:0.25; transparent:true'); cy.setAttribute('position','0 0.7 0');
+        pEnt.appendChild(cy);
+        const cc = document.createElement('a-circle');
+        cc.setAttribute('class','clickable'); cc.setAttribute('position','0 1.95 0'); cc.setAttribute('radius','0.22'); cc.setAttribute('color','#1a73e8'); cc.setAttribute('material','shader:flat; depthTest:false');
+        cc.onclick = function() {
+            window.speechSynthesis.cancel();
+            let vt = room.voice || "";
+            if(!vt) return;
+            currentUtterance = new SpeechSynthesisUtterance(vt);
+            currentUtterance.lang = 'zh-TW';
+            window.speechSynthesis.speak(currentUtterance);
+            document.getElementById('audio-status').textContent = `🔊 ${room.customName||roomKey}`;
+        };
+        const sp = document.createElement('a-image');
+        sp.setAttribute('src','#ic-speaker'); sp.setAttribute('width','0.24'); sp.setAttribute('height','0.24');
+        cc.appendChild(sp); pEnt.appendChild(cc); world.appendChild(pEnt);
+
+        // 傳送圈
+        const nr = document.createElement('a-entity');
+        nr.setAttribute('position',`${rx} 0.02 ${rz}`);
+        const cb = document.createElement('a-circle');
+        cb.setAttribute('class','clickable'); cb.setAttribute('rotation','-90 0 0'); cb.setAttribute('radius','0.5'); cb.setAttribute('color','#ffffff'); cb.setAttribute('material','opacity:0.6; shader:flat; depthTest:false;');
+        cb.onclick = function() {
+            executeMove(rx,rz);
+            document.getElementById('room-indicator-overlay').textContent = `當前位置：${room.customName||roomKey}`;
+        };
+        const ai = document.createElement('a-image');
+        ai.setAttribute('src','#arrow'); ai.setAttribute('position','0 0.005 0'); ai.setAttribute('rotation','-90 0 0'); ai.setAttribute('width','0.35'); ai.setAttribute('height','0.35'); ai.setAttribute('material','depthTest:false;');
+        cb.appendChild(ai); nr.appendChild(cb); world.appendChild(nr);
+    });
+
+    const startR = galleryDatabase[Object.keys(galleryDatabase)[0]];
+    if(startR) executeMove((startR.gridX-2)*SCALE_MULTIPLIER,(startR.gridY-1)*SCALE_MULTIPLIER);
+    addVersionHistory('套用 3D 渲染');
+    showToast('✅ 3D 場景已更新');
+}
+
+function executeMove(tx,tz) {
+    document.getElementById('cameraRig').setAttribute('animation',{
+        property:'position', to:`${tx} 0 ${tz}`, dur:1200, easing:'cubicBezier(0.25,1,0.5,1)'
+    });
+}
+
+function pauseVoice() { window.speechSynthesis.pause(); }
+function resumeVoice() { window.speechSynthesis.resume(); }
+function stopVoice() { window.speechSynthesis.cancel(); document.getElementById('audio-status').textContent='🔊 靜音中'; }
+
+// ══════════════════════════════════════════════
+// 滾輪縮放
+// ══════════════════════════════════════════════
+document.getElementById('viewport-container').addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const cam = document.getElementById('userView');
+    currentFov = Math.max(20, Math.min(85, currentFov + e.deltaY*0.04));
+    cam.setAttribute('camera','fov',currentFov);
+}, {passive:false});
+
+// ══════════════════════════════════════════════
+// 輸出獨立 HTML
+// ══════════════════════════════════════════════
+function generateStandaloneHTML() {
+    saveCurrentInputsToMemory();
+    const expoName = document.getElementById('expo-name').value || '藝廊展覽';
+    const dbJson = JSON.stringify(galleryDatabase);
+    const routeJson = JSON.stringify(routeStops);
+
+    const expoDesc = document.getElementById('expo-desc').value || '沉浸式虛擬藝廊展覽';
+    const expoOrganizer = document.getElementById('expo-organizer').value || '';
+
+    const html = `<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>${expoName}</title>
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"><\/script>
+<style>
+:root{--g-blue:#1a73e8;--text-dark:#202124;--text-gray:#5f6368;}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;font-family:"Microsoft JhengHei",sans-serif;}
+body{background:#0c0d12;overflow:hidden;}
+/* ── 首頁 ── */
+#landing-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#ffffff;display:flex;z-index:9999;transition:opacity 0.6s ease;}
+.landing-visual{flex:1.2;background:radial-gradient(circle at center,#ffffff 0%,#dcdde1 100%);display:flex;justify-content:center;align-items:center;perspective:1000px;}
+.gallery-map-preview{width:250px;height:250px;position:relative;transform-style:preserve-3d;animation:mapOrbit 25s infinite linear;}
+.preview-room{position:absolute;width:48px;height:48px;background:rgba(245,246,248,0.95);border:2px solid #1a1b1f;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:#1a73e8;}
+.landing-content{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 60px;background:#ffffff;}
+.landing-content h1{font-size:32px;font-weight:500;color:var(--text-dark);margin-bottom:12px;}
+.landing-content p{color:var(--text-gray);font-size:14px;line-height:1.7;margin-bottom:6px;}
+.landing-organizer{font-size:12px;color:#9aa0a6;margin-top:4px;}
+.btn-enter{width:fit-content;background:var(--g-blue);color:white;padding:16px 48px;border-radius:24px;border:none;cursor:pointer;font-weight:bold;margin-top:28px;font-size:14px;box-shadow:0 4px 14px rgba(26,115,232,0.4);}
+.btn-enter:hover{background:#1557b0;}
+@keyframes mapOrbit{0%{transform:rotateX(60deg) rotateZ(0deg);}100%{transform:rotateX(60deg) rotateZ(360deg);}}
+/* ── 導覽列 ── */
+#room-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);padding:8px 16px;border-radius:40px;display:flex;gap:6px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:99;}
+.nav-btn{background:rgba(0,0,0,0.05);border:none;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;}
+.nav-btn:hover,.nav-btn.active{background:#1a73e8;color:white;}
+/* ── 位置標示 & 音訊 ── */
+#room-label{position:fixed;top:16px;left:16px;background:rgba(0,0,0,0.75);color:white;padding:8px 16px;border-radius:20px;font-size:13px;z-index:99;}
+#audio-box{position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.95);padding:7px 14px;border-radius:30px;display:flex;align-items:center;gap:8px;z-index:99;font-size:12px;box-shadow:0 4px 15px rgba(0,0,0,0.15);}
+</style></head><body>
+<!-- 首頁 splash -->
+<div id="landing-screen">
+  <div class="landing-visual"><div class="gallery-map-preview" id="mini-map-container"><\/div><\/div>
+  <div class="landing-content">
+    <h1>${expoName}<\/h1>
+    <p>${expoDesc}<\/p>
+    ${expoOrganizer ? '<p class="landing-organizer">主辦：'+expoOrganizer+'<\/p>' : ''}
+    <button class="btn-enter" onclick="startExplore()">進入展覽<\/button>
+  <\/div>
+<\/div>
+<!-- HUD -->
+<div id="room-label">${expoName}<\/div>
+<div id="audio-box"><span id="aud-status">🔊 靜音中<\/span><button onclick="window.speechSynthesis.pause()">⏸<\/button><button onclick="window.speechSynthesis.resume()">▶<\/button><button onclick="window.speechSynthesis.cancel();document.getElementById('aud-status').textContent='🔊 靜音中'">⏹<\/button><\/div>
+<div id="room-nav"><\/div>
+<a-scene vr-mode-ui="enabled:false" cursor="rayOrigin:mouse" raycaster="objects:.clickable,.floor-tile">
+<a-assets><img id="arrow" src="https://i.imgur.com/vHdfS9g.png"><img id="ic-speaker" src="https://img.icons8.com/ios-filled/100/ffffff/speaker.png"><\/a-assets>
+<a-entity id="rig" position="0 0 0" rotation="0 45 0"><a-entity camera="fov:60" position="0 1.6 0" look-controls="pointerLockEnabled:false"><\/a-entity><\/a-entity>
+<a-sky color="#0c0d12"><\/a-sky><a-ambient-light color="#fff" intensity="0.9"><\/a-ambient-light>
+<a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200" color="#18191d"><\/a-plane>
+<a-plane position="0 5.2 0" rotation="90 0 0" width="200" height="200" color="#6e5d4f"><\/a-plane>
+<a-entity id="world"><\/a-entity>
+<\/a-scene>
+<script>
+const db=${dbJson};
+const SM=9,WW=9,WH=5.2;
+let curU=null,curRoom=null,roomTick=null;
+function renderCanvas(html,fs,fc,ta,cb){const cv=document.createElement('canvas');cv.width=1024;cv.height=768;const ctx=cv.getContext('2d');const d='<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Microsoft JhengHei,sans-serif;padding:40px;color:'+fc+';font-size:'+fs+'px;line-height:1.5;text-align:'+ta+';">'+html+'<\/div><\/foreignObject><\/svg>';const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(d);img.onload=()=>{ctx.drawImage(img,0,0);cb(cv.toDataURL());};}
+function buildMiniMap(){const c=document.getElementById('mini-map-container');Object.keys(db).forEach(k=>{const r=db[k];const b=document.createElement('div');b.className='preview-room';b.style.left=(r.gridX*47)+'px';b.style.top=(r.gridY*47)+'px';b.innerText=k;c.appendChild(b);});}
+function startExplore(){const ls=document.getElementById('landing-screen');ls.style.opacity='0';setTimeout(()=>ls.style.display='none',600);}
+function buildNav(){const nav=document.getElementById('room-nav');nav.innerHTML='';Object.keys(db).forEach(k=>{const b=document.createElement('button');b.className='nav-btn';b.textContent='展廳'+k+(db[k].customName?'·'+db[k].customName:'');b.onclick=()=>{const r=db[k];teleport((r.gridX-2)*SM,(r.gridY-1)*SM,k);document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};nav.appendChild(b);});}
+
+/* ── 移動 & 房間偵測 ── */
+function teleport(x,z,roomKey){
+  document.getElementById('rig').setAttribute('animation',{property:'position',to:x+' 0 '+z,dur:1200,easing:'cubicBezier(0.25,1,0.5,1)'});
+  if(roomKey) setTimeout(()=>setRoom(roomKey),200);
+}
+function setRoom(k){
+  if(curRoom===k) return;
+  curRoom=k;
+  const r=db[k];
+  document.getElementById('room-label').textContent=r.customName||k;
+  /* 只顯示當前房間的聲音柱和地板點位 */
+  Object.keys(db).forEach(key=>{
+    const pe=document.getElementById('pe-'+key);
+    const nr=document.getElementById('nr-'+key);
+    if(pe) pe.setAttribute('visible', key===k ? 'true':'false');
+    if(nr) nr.setAttribute('visible', key===k ? 'true':'false');
+  });
+  /* 啟用當前房間地板的點擊，停用其餘 */
+  Object.keys(db).forEach(key=>{
+    const fl=document.getElementById('floor-'+key);
+    if(fl){
+      if(key===k){fl.setAttribute('class','clickable floor-tile');fl.setAttribute('material','color:#18191d;opacity:0.001;');}
+      else{fl.removeAttribute('class');fl.setAttribute('material','color:#18191d;opacity:0;');}
+    }
+  });
+}
+function nearestRoom(px,pz){
+  let best=null,bd=Infinity;
+  Object.keys(db).forEach(k=>{const r=db[k];const rx=(r.gridX-2)*SM,rz=(r.gridY-1)*SM;const d=Math.abs(px-rx)+Math.abs(pz-rz);if(d<bd){bd=d;best=k;}});
+  return best;
+}
+
+/* ── 建立場景 ── */
+function build(){
+  const w=document.getElementById('world');w.innerHTML='';
+  Object.keys(db).forEach(k=>{
+    const r=db[k];const rx=(r.gridX-2)*SM,rz=(r.gridY-1)*SM,wc=r.roomColor||'#f5f6f8',wt=r.roomTexture||'';
+    const wc2=[{dir:'north',pos:'0 '+(WH/2)+' -4.5',rot:'0 0 0'},{dir:'south',pos:'0 '+(WH/2)+' 4.5',rot:'0 180 0'},{dir:'west',pos:'-4.5 '+(WH/2)+' 0',rot:'0 90 0'},{dir:'east',pos:'4.5 '+(WH/2)+' 0',rot:'0 -90 0'}];
+    wc2.forEach(c=>{
+      const wd=r.walls[c.dir]||{type:'image'};const pts=c.pos.split(' ');const ax=rx+parseFloat(pts[0]),ay=parseFloat(pts[1]),az=rz+parseFloat(pts[2]);
+      if(wd.type==='door'){const de=document.createElement('a-entity');de.setAttribute('position',ax+' 0 '+az);de.setAttribute('rotation',c.rot);[{x:'-3.25',w:'2.5'},{x:'3.25',w:'2.5'}].forEach(p=>{const lp=document.createElement('a-box');lp.setAttribute('position',p.x+' '+ay+' 0');lp.setAttribute('width',p.w);lp.setAttribute('height',WH);lp.setAttribute('depth','0.1');lp.setAttribute('color',wc);if(wt)lp.setAttribute('src',wt);de.appendChild(lp);});const tb=document.createElement('a-box');tb.setAttribute('position','0 4.45 0');tb.setAttribute('width','4.0');tb.setAttribute('height','1.5');tb.setAttribute('depth','0.1');tb.setAttribute('color',wc);if(wt)tb.setAttribute('src',wt);de.appendChild(tb);w.appendChild(de);}
+      else{const wb=document.createElement('a-box');wb.setAttribute('position',ax+' '+ay+' '+az);wb.setAttribute('rotation',c.rot);wb.setAttribute('width',WW);wb.setAttribute('height',WH);wb.setAttribute('depth','0.1');wb.setAttribute('color',wc);if(wt)wb.setAttribute('src',wt);
+      const bb=document.createElement('a-box');bb.setAttribute('position','0 -'+(ay-0.05)+' 0.06');bb.setAttribute('width',WW);bb.setAttribute('height','0.12');bb.setAttribute('depth','0.02');bb.setAttribute('color','#111111');wb.appendChild(bb);
+      if(wd.type==='image'&&wd.img){const ml=[];if(wd.desc)ml.push('<div style="font-size:28px;font-weight:bold;margin-bottom:6px;">'+wd.desc+'<\/div>');const sp2=[];if(wd.artist)sp2.push(wd.artist);if(wd.year)sp2.push(wd.year);if(sp2.length)ml.push('<div style="font-size:22px;color:#cccccc;">'+sp2.join('　·　')+'<\/div>');if(wd.medium)ml.push('<div style="font-size:19px;color:#aaaaaa;margin-top:4px;">媒材：'+wd.medium+'<\/div>');if(wd.collection)ml.push('<div style="font-size:19px;color:#aaaaaa;">典藏：'+wd.collection+'<\/div>');if(wd.metaNotes)ml.push('<div style="font-size:17px;color:#888888;margin-top:8px;border-top:1px solid #555;padding-top:8px;">'+wd.metaNotes+'<\/div>');const lh=wd.metaNotes?1.2:(wd.medium||wd.collection?0.9:0.5);const fr=document.createElement('a-box');fr.setAttribute('position','0 0.3 0.06');fr.setAttribute('width','2.2');fr.setAttribute('height','2.8');fr.setAttribute('depth','0.08');fr.setAttribute('color','#1e1610');const pl=document.createElement('a-plane');pl.setAttribute('position','0 0.15 0.045');pl.setAttribute('width','2.0');pl.setAttribute('height','2.3');pl.setAttribute('src',wd.img);fr.appendChild(pl);if(ml.length){const bg=document.createElement('a-box');bg.setAttribute('position','0 '+(-1.05-lh/2+0.05)+' 0.05');bg.setAttribute('width','2.18');bg.setAttribute('height',String(lh+0.1));bg.setAttribute('depth','0.02');bg.setAttribute('color','#111111');fr.appendChild(bg);const dp=document.createElement('a-plane');dp.setAttribute('position','0 '+(-1.05-lh/2+0.05)+' 0.065');dp.setAttribute('width','2.0');dp.setAttribute('height',String(lh));dp.setAttribute('material','shader:flat;transparent:true;');renderCanvas('<div style="padding:12px 16px;line-height:1.5;">'+ml.join('')+'<\/div>',20,'#ffffff','left',du=>dp.setAttribute('src',du));fr.appendChild(dp);}wb.appendChild(fr);}
+      else if(wd.type==='text'&&wd.text){const tp=document.createElement('a-plane');tp.setAttribute('position','0 0.2 0.06');tp.setAttribute('width','6.5');tp.setAttribute('height','4.0');tp.setAttribute('material','shader:flat;transparent:true;');renderCanvas(wd.text,28,'#ffffff','center',du=>tp.setAttribute('src',du));wb.appendChild(tp);}
+      w.appendChild(wb);}
+    });
+
+    /* ── 可點擊地板（每個房間一塊，範圍 SM×SM）── */
+    const fl=document.createElement('a-plane');
+    fl.setAttribute('id','floor-'+k);
+    fl.setAttribute('position',rx+' 0.01 '+rz);
+    fl.setAttribute('rotation','-90 0 0');
+    fl.setAttribute('width',SM-0.4);fl.setAttribute('height',SM-0.4);
+    fl.setAttribute('material','color:#18191d;opacity:0;');
+    fl.onclick=function(evt){
+      /* 取得點擊的 3D 世界座標 */
+      const inter=evt.detail&&evt.detail.intersection;
+      if(!inter) return;
+      const tx=inter.point.x, tz=inter.point.z;
+      /* 限制在當前房間範圍內（防止穿牆） */
+      const half=(SM-0.4)/2;
+      const cx=Math.max(rx-half+0.5,Math.min(rx+half-0.5,tx));
+      const cz=Math.max(rz-half+0.5,Math.min(rz+half-0.5,tz));
+      document.getElementById('rig').setAttribute('animation',{property:'position',to:cx+' 0 '+cz,dur:600,easing:'cubicBezier(0.25,1,0.5,1)'});
+    };
+    w.appendChild(fl);
+
+    /* ── 聲音柱（預設隱藏，setRoom 控制）── */
+    const pe=document.createElement('a-entity');pe.setAttribute('id','pe-'+k);pe.setAttribute('visible','false');
+    pe.setAttribute('position',rx+' 0 '+(rz-2));pe.setAttribute('animation','property:position;to:'+rx+' 0.08 '+(rz-2)+';dir:alternate;dur:2000;loop:true;easing:easeInOutQuad');
+    const cy=document.createElement('a-cylinder');cy.setAttribute('color','#6ba4e8');cy.setAttribute('height','1.8');cy.setAttribute('radius','0.04');cy.setAttribute('material','emissive:#6ba4e8;emissiveIntensity:0.6;opacity:0.25;transparent:true');cy.setAttribute('position','0 0.7 0');pe.appendChild(cy);
+    const cc=document.createElement('a-circle');cc.setAttribute('class','clickable');cc.setAttribute('position','0 1.95 0');cc.setAttribute('radius','0.22');cc.setAttribute('color','#1a73e8');cc.setAttribute('material','shader:flat;depthTest:false');
+    cc.onclick=function(){window.speechSynthesis.cancel();if(!r.voice)return;curU=new SpeechSynthesisUtterance(r.voice);curU.lang='zh-TW';window.speechSynthesis.speak(curU);document.getElementById('aud-status').textContent='🔊'+(r.customName||k);};
+    const sp=document.createElement('a-image');sp.setAttribute('src','#ic-speaker');sp.setAttribute('width','0.24');sp.setAttribute('height','0.24');cc.appendChild(sp);pe.appendChild(cc);w.appendChild(pe);
+
+    /* ── 傳送圈（不再需要，地板可直接點；保留供門廊用）── */
+    /* 改為：若有廊門，在廊門中央放小傳送圈，方便跨房間移動 */
+    ['north','south','west','east'].forEach(dir=>{
+      if((r.walls[dir]||{}).type!=='door') return;
+      const doorPos={north:[rx,rz-4.5],south:[rx,rz+4.5],west:[rx-4.5,rz],east:[rx+4.5,rz]};
+      const dp2=doorPos[dir];
+      const nr=document.createElement('a-entity');nr.setAttribute('id','nr-'+k+'-'+dir);nr.setAttribute('visible','false');nr.setAttribute('position',dp2[0]+' 0.02 '+dp2[1]);
+      const cb=document.createElement('a-circle');cb.setAttribute('class','clickable');cb.setAttribute('rotation','-90 0 0');cb.setAttribute('radius','0.45');cb.setAttribute('color','#ffffff');cb.setAttribute('material','opacity:0.55;shader:flat;depthTest:false;');
+      const destKey=nearestRoomThrough(k,dir);
+      cb.onclick=function(){if(destKey){teleport((db[destKey].gridX-2)*SM,(db[destKey].gridY-1)*SM,destKey);}};
+      const ai=document.createElement('a-image');ai.setAttribute('src','#arrow');ai.setAttribute('position','0 0.005 0');ai.setAttribute('rotation','-90 0 0');ai.setAttribute('width','0.35');ai.setAttribute('height','0.35');ai.setAttribute('material','depthTest:false;');
+      cb.appendChild(ai);nr.appendChild(cb);w.appendChild(nr);
+    });
+  });
+
+  /* ── 啟動房間偵測 loop ── */
+  const rig=document.getElementById('rig');
+  if(roomTick) clearInterval(roomTick);
+  roomTick=setInterval(()=>{
+    const p=rig.getAttribute('position');
+    if(!p) return;
+    const k=nearestRoom(p.x,p.z);
+    if(k!==curRoom) setRoom(k);
+    /* 廊門傳送圈也跟著當前房間顯示 */
+    Object.keys(db).forEach(key=>{
+      ['north','south','west','east'].forEach(dir=>{
+        const el=document.getElementById('nr-'+key+'-'+dir);
+        if(el) el.setAttribute('visible', key===curRoom ? 'true':'false');
+      });
+    });
+  },300);
+
+  const f=db[Object.keys(db)[0]];
+  if(f){const fk=Object.keys(db)[0];teleport((f.gridX-2)*SM,(f.gridY-1)*SM,fk);}
+}
+
+/* 找廊門對面最近的房間 */
+function nearestRoomThrough(fromKey,dir){
+  const fr=db[fromKey];const frx=(fr.gridX-2)*SM,frz=(fr.gridY-1)*SM;
+  const offset={north:[0,-SM],south:[0,SM],west:[-SM,0],east:[SM,0]};
+  const tx=frx+offset[dir][0],tz=frz+offset[dir][1];
+  return nearestRoom(tx,tz);
+}
+
+window.onload=()=>{buildMiniMap();buildNav();build();};
+<\/script></body></html>`;
+
+    const expoFileName = (expoName || 'gallery').replace(/\s+/g,'_') + '_展覽.html';
+    downloadBlob(html, expoFileName, 'text/html;charset=utf-8');
+    addVersionHistory('輸出獨立展覽檔');
+    showToast('✅ 獨立展覽檔已下載');
+}
+
+// ══════════════════════════════════════════════
+// 初始化
+// ══════════════════════════════════════════════
+window.onload = () => {
+    buildRoomSelector();
+    build2DGridSystem();
+    buildRoomList();
+    switchEditingRoom('A');
+    updateStats();
+    // 初始化動線（示範）
+    routeStops = [
+        {roomKey:'A', note:'開幕展廳，建議停留 15 分鐘'},
+        {roomKey:'C', note:'中央大廳，提供整體展覽地圖'},
+        {roomKey:'D', note:'重點展品區'},
+    ];
+    buildRouteUI();
+    compileAndRender3D();
+};
+</script>
+</body>
+</html>
