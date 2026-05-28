@@ -38,7 +38,7 @@
         .section-title { font-size: 12px; font-weight: 600; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--g-blue); padding-left: 8px; margin-bottom: 8px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 11px; font-weight: 500; color: var(--text-gray); }
-        .form-group input, .form-group textarea, .form-group select { padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 12px; outline: none; background: #fff; font-family: inherit; }
+        .form-group input, .form-group textarea, .form-group select { padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 12px; outline: none; background: #fff; font-family: inherit; width: 100%; box-sizing: border-box; }
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--g-blue); box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -123,6 +123,8 @@
         /* 3D 視窗 */
         #viewport-container { flex: 1; height: 100%; position: relative; }
         #room-indicator-overlay { position: absolute; top: 16px; left: 16px; background: rgba(32,33,36,0.85); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 99; pointer-events: none; backdrop-filter: blur(4px); }
+        #floor-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(32,33,36,0.75); color: rgba(255,255,255,0.85); padding: 6px 18px; border-radius: 20px; font-size: 11px; z-index: 99; pointer-events: none; backdrop-filter: blur(4px); letter-spacing: 0.03em; }
+        #floor-hover-label { position: absolute; bottom: 54px; left: 50%; transform: translateX(-50%); background: rgba(26,115,232,0.9); color: white; padding: 5px 16px; border-radius: 14px; font-size: 12px; font-weight: 500; z-index: 99; pointer-events: none; opacity: 0; transition: opacity 0.2s; white-space: nowrap; }
         #audio-controller { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.95); padding: 7px 14px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; z-index: 99; border: 1px solid var(--border-color); }
         #audio-status { font-size: 11px; color: var(--text-dark); font-weight: 500; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .audio-btn { background: none; border: none; cursor: pointer; padding: 4px; font-size: 13px; display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 26px; height: 26px; }
@@ -139,10 +141,100 @@
 
         #hidden-canvas-encoder { display: none; }
 
+        /* ═══ 全圖 Lightbox ═══ */
+        #artwork-lightbox {
+            display: none;
+            position: fixed; inset: 0; z-index: 9000;
+            background: rgba(0,0,0,0.92);
+            backdrop-filter: blur(8px);
+            align-items: center; justify-content: center;
+            flex-direction: column;
+            cursor: zoom-out;
+        }
+        #artwork-lightbox.open { display: flex; }
+        #lightbox-img {
+            max-width: 88vw; max-height: 78vh;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 8px 60px rgba(0,0,0,0.8);
+            transition: transform 0.3s ease;
+            cursor: default;
+        }
+        #lightbox-meta {
+            margin-top: 18px;
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            max-width: 600px;
+            padding: 0 16px;
+        }
+        #lightbox-meta .lb-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+        #lightbox-meta .lb-sub { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.7; }
+        #lightbox-close {
+            position: absolute; top: 18px; right: 22px;
+            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+            color: white; font-size: 22px; line-height: 1;
+            width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        #lightbox-close:hover { background: rgba(255,255,255,0.25); }
+
         /* 滾動條美化 */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #c1c4c8; border-radius: 10px; }
+
+        /* ═══ 手機 RWD ═══ */
+        @media (max-width: 768px) {
+            :root { --panel-width: 100vw; }
+            body { flex-direction: column-reverse; }
+
+            /* 3D 視窗佔上方固定高度 */
+            #viewport-container { flex: none; height: 55vh; width: 100%; }
+
+            /* 面板變成下方區塊，包含 footer */
+            #cms-panel {
+                width: 100%;
+                height: 45vh;
+                border-right: none;
+                border-top: 1px solid var(--border-color);
+                box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* 把 footer 移進面板流中 */
+            #cms-footer-fixed {
+                position: static !important;
+                width: 100% !important;
+                order: 99;
+            }
+
+            /* header 縮小 */
+            .cms-header { padding: 5px 10px; flex-shrink: 0; }
+            .cms-header h2 { font-size: 12px; }
+            .header-badges { display: none; }
+            .cms-header-top span { display: none; }
+
+            /* tab 只顯示 emoji，文字隱藏 */
+            .tab-btn { font-size: 15px; padding: 5px 2px; }
+            .tab-label { display: none; }
+
+            /* 底部按鈕列縮小 */
+            .cms-footer { padding: 5px 8px; gap: 4px; flex-shrink: 0; }
+            .btn { padding: 5px 8px; font-size: 11px; border-radius: 5px; }
+            .btn-green { font-size: 11px; }
+            .btn-row { gap: 5px; }
+
+            /* tab panel 滾動區縮小 */
+            .tab-panel { padding: 10px 12px; gap: 8px; }
+
+            /* 3D overlay 縮小 */
+            #room-indicator-overlay { font-size: 10px; padding: 4px 10px; top: 6px; left: 6px; }
+            #audio-controller { padding: 4px 8px; gap: 4px; top: 6px; right: 6px; }
+            #audio-status { max-width: 70px; font-size: 10px; }
+            .audio-btn { width: 18px; height: 18px; font-size: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -163,25 +255,27 @@
         </div>
     </div>
 
+    <!-- Tab 導覽列 -->
     <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('tab-info')">📋 展覽</button>
-        <button class="tab-btn" onclick="switchTab('tab-layout')">🗺️ 佈局</button>
-        <button class="tab-btn" onclick="switchTab('tab-room')">🏠 展廳</button>
-        <button class="tab-btn" onclick="switchTab('tab-artworks')">🖼️ 清單</button>
-        <button class="tab-btn" onclick="switchTab('tab-route')">🚶 動線</button>
-        <button class="tab-btn" onclick="switchTab('tab-notes')">📝 備忘</button>
+        <button class="tab-btn active" onclick="switchTab('tab-info')">📋<span class="tab-label"> 展覽</span></button>
+        <button class="tab-btn" onclick="switchTab('tab-layout')">🗺️<span class="tab-label"> 佈局</span></button>
+        <button class="tab-btn" onclick="switchTab('tab-room')">🏠<span class="tab-label"> 展廳</span></button>
+        <button class="tab-btn" onclick="switchTab('tab-artworks')">🖼️<span class="tab-label"> 清單</span></button>
+        <button class="tab-btn" onclick="switchTab('tab-route')">🚶<span class="tab-label"> 動線</span></button>
+        <button class="tab-btn" onclick="switchTab('tab-notes')">📝<span class="tab-label"> 備忘</span></button>
     </div>
 
+    <!-- ① 展覽基本資訊 -->
     <div id="tab-info" class="tab-panel active">
         <div class="section-title">展覽基本資料</div>
         <div class="info-card">
             <div class="form-group" style="margin-bottom:10px;">
                 <label>展覽名稱</label>
-                <input type="text" id="expo-name" placeholder="例如：光影之間 — 當代藝術聯展" value="The Grand Founders Gallery">
+                <input type="text" id="expo-name" placeholder="例如：光影之間 — 當代藝術聯展" value="故宮精華特展——五千年文明的見證">
             </div>
             <div class="form-group" style="margin-bottom:10px;">
                 <label>主辦單位</label>
-                <input type="text" id="expo-organizer" placeholder="主辦機構名稱">
+                <input type="text" id="expo-organizer" placeholder="主辦機構名稱" value="國立故宮博物院">
             </div>
             <div class="form-row" style="margin-bottom:10px;">
                 <div class="form-group">
@@ -195,11 +289,11 @@
             </div>
             <div class="form-group" style="margin-bottom:10px;">
                 <label>展覽地點</label>
-                <input type="text" id="expo-venue" placeholder="展覽場地名稱與地址">
+                <input type="text" id="expo-venue" placeholder="展覽場地名稱與地址" value="台北市士林區至善路二段221號">
             </div>
             <div class="form-group">
                 <label>展覽簡介</label>
-                <textarea id="expo-desc" rows="3" placeholder="展覽主旨、策展理念、精選描述..."></textarea>
+                <textarea id="expo-desc" rows="3" placeholder="展覽主旨、策展理念、精選描述...">典藏七千年文明、六十五萬件中華瑰寶，本特展精選六大類別國寶——青銅禮器、北宋山水、書法法帖、玉器工藝、宋明清陶瓷、清宮珍玩，帶領觀眾縱覽中華藝術史的最高峰。></textarea>
             </div>
         </div>
 
@@ -228,6 +322,7 @@
         <input type="file" id="json-file-input" accept=".json" style="display:none" onchange="importJSON(this)">
     </div>
 
+    <!-- ② 空間佈局 -->
     <div id="tab-layout" class="tab-panel">
         <div class="section-title">
             <span>空間矩陣 (5 × 5 Grid)</span>
@@ -249,6 +344,7 @@
         <div class="room-list" id="room-list"></div>
     </div>
 
+    <!-- ③ 展廳細部設定 -->
     <div id="tab-room" class="tab-panel">
         <div class="section-title">
             <span>② 展廳與環境設置</span>
@@ -352,10 +448,10 @@
                 </div>
             </div>
 
-            <div id="type-text-fields" style="display:none;">
+            <div id="type-text-fields" style="display:none; overflow:hidden;">
                 <div class="form-group">
                     <label>文字牆內容（支援 &lt;br&gt;、&lt;b&gt;、&lt;h1&gt; 等標籤）</label>
-                    <textarea id="wall-panel-text" rows="6" placeholder="輸入內容..." oninput="saveCurrentInputsToMemory()"></textarea>
+                    <textarea id="wall-panel-text" rows="6" placeholder="輸入內容..." oninput="saveCurrentInputsToMemory()" style="resize:vertical;"></textarea>
                 </div>
             </div>
 
@@ -365,6 +461,7 @@
         </div>
     </div>
 
+    <!-- ④ 展品清單 -->
     <div id="tab-artworks" class="tab-panel">
         <div class="section-title">
             <span>全展品清單</span>
@@ -389,6 +486,7 @@
         </div>
     </div>
 
+    <!-- ⑤ 動線規劃 -->
     <div id="tab-route" class="tab-panel">
         <div class="section-title">
             <span>訪客動線設計</span>
@@ -414,6 +512,7 @@
         </div>
     </div>
 
+    <!-- ⑥ 策展備忘錄 -->
     <div id="tab-notes" class="tab-panel">
         <div class="section-title">
             <span>策展工作備忘錄</span>
@@ -421,7 +520,17 @@
         </div>
         <div class="form-group">
             <label>工作筆記（僅供內部規劃，不會出現在展覽中）</label>
-            <textarea class="note-area" id="curator-notes" placeholder="待辦事項、聯絡人、審核進度、版權確認狀態..." oninput="saveNotes()"></textarea>
+            <textarea class="note-area" id="curator-notes" placeholder="待辦事項、聯絡人、審核進度、版權確認狀態...">【版權確認】所有展品圖片均來自 Wikimedia Commons 公共領域，圖源已核對。
+
+【待辦事項】
+☐ 確認毛公鼎高解析度圖片授權
+☐ 與故宮公關部聯繫官方說明文字審核
+☐ 語音導覽請配音員錄製正式版本
+☐ 製作實體展覽地圖（對應6廳動線）
+☐ 確認各廳照明溫度（書畫廳建議<50勒克斯）
+
+【策展備注】
+北宋山水廳三寶為極度限展品，須確認當期展出時間。建議展期設定於3–4月春季，與早春圖題材呼應。 oninput="saveNotes()"></textarea>
             <div class="note-timestamp" id="note-saved-time"></div>
         </div>
 
@@ -435,7 +544,8 @@
     </div>
 </div>
 
-<div style="position:fixed; bottom:0; left:0; width:var(--panel-width); z-index:20;">
+<!-- 底部操作按鈕 -->
+<div id="cms-footer-fixed" style="position:fixed; bottom:0; left:0; width:var(--panel-width); z-index:20;">
     <div class="cms-footer">
         <div class="btn-row">
             <button class="btn btn-secondary" onclick="exportJSONData()">💾 備份 JSON</button>
@@ -445,8 +555,11 @@
     </div>
 </div>
 
+<!-- 3D 視窗 -->
 <div id="viewport-container">
     <div id="room-indicator-overlay">當前位置：3D 展廳</div>
+    <div id="floor-hint">👆 點擊任何展廳地面即可移動至該位置</div>
+    <div id="floor-hover-label"></div>
     <div id="audio-controller">
         <span id="audio-status">🔊 靜音中</span>
         <button class="audio-btn" title="暫停" onclick="pauseVoice()">⏸️</button>
@@ -454,12 +567,12 @@
         <button class="audio-btn" title="停止" onclick="stopVoice()">⏹</button>
     </div>
     <a-scene embedded vr-mode-ui="enabled: false" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-        <a-assets id="main-assets-pool">
+        <a-assets>
             <img id="arrow" src="https://i.imgur.com/vHdfS9g.png">
             <img id="ic-speaker" src="https://img.icons8.com/ios-filled/100/ffffff/speaker.png">
         </a-assets>
         <a-entity id="cameraRig" position="0 0 0" rotation="0 45 0">
-            <a-entity id="userView" camera="fov: 60" position="0 1.6 0" look-controls="pointerLockEnabled: false"></a-entity>
+            <a-entity id="userView" camera="fov: 60" position="0 1.6 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false; touchEnabled: true"></a-entity>
         </a-entity>
         <a-sky color="#0c0d12"></a-sky>
         <a-ambient-light color="#ffffff" intensity="0.9"></a-ambient-light>
@@ -471,255 +584,534 @@
 
 <script>
 // ══════════════════════════════════════════════
-// 全域變數與資料初始化
+// 資料庫
 // ══════════════════════════════════════════════
-const SCALE_MULTIPLIER = 16; 
-const ROOM_SIZE = 14; 
-const WALL_WIDTH = 14;
-const WALL_HEIGHT = 5.2;
-
 let galleryDatabase = {
     "A": {
-        roomColor: "#f5f6f8", roomTexture: "", gridX: 2, gridY: 2,
-        customName: "中央大廳", subtitle: "展覽序幕", voice: "歡迎光臨本次線上虛擬展覽。",
-        walls: {
-            north: { type: "text", text: "<h1>線上特展</h1><p>歡迎來到 Pocket Gallery 3D 虛擬展廳。</p>" },
-            south: { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" },
-            west: { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" },
-            east: { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" }
+        "roomColor": "#f5f6f8",
+        "roomTexture": "",
+        "gridX": 2,
+        "gridY": 0,
+        "customName": "",
+        "subtitle": "",
+        "voice": "",
+        "walls": {
+            "north": {
+                "type": "image",
+                "img": "",
+                "desc": "",
+                "text": "",
+                "artist": "",
+                "year": "",
+                "medium": "",
+                "collection": "",
+                "metaNotes": ""
+            },
+            "south": {
+                "type": "door"
+            },
+            "west": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/b/b8/San_Family_Plate.JPG",
+                "desc": "<b>散氏盤</b>",
+                "text": "",
+                "artist": "西周王室工匠（佚名）",
+                "year": "西周厲王年間（約前877–前841）",
+                "medium": "青銅鑄造，盤內刻銘文357字",
+                "collection": "國立故宮博物院｜重要古物",
+                "metaNotes": "記載西周時期兩國土地交割契約，是研究西周土地制度與法律的第一手史料。"
+            },
+            "east": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Ding_cauldron_of_Duke_Mao.jpg",
+                "desc": "毛公鼎",
+                "text": "",
+                "artist": "",
+                "year": "",
+                "medium": "",
+                "collection": "",
+                "metaNotes": ""
+            }
+        }
+    },
+    "B": {
+        "roomColor": "#1a2635",
+        "roomTexture": "",
+        "gridX": 1,
+        "gridY": 1,
+        "customName": "北宋山水廳",
+        "subtitle": "鎮院三寶｜十年一見",
+        "voice": "您已進入北宋山水廳。此廳展示故宮鎮院三寶中最受推崇的范寬〈谿山行旅圖〉，此畫被明代書畫大家董其昌稱為宋畫第一，是中國山水畫史上無可超越的神品。",
+        "walls": {
+            "north": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/%E5%AE%8B%E8%8C%83%E5%AF%AC%E8%B0%BF%E5%B1%B1%E8%A1%8C%E6%97%85%E5%9C%96_%E8%BB%B8.jpg/960px-%E5%AE%8B%E8%8C%83%E5%AF%AC%E8%B0%BF%E5%B1%B1%E8%A1%8C%E6%97%85%E5%9C%96_%E8%BB%B8.jpg",
+                "desc": "<b>谿山行旅圖</b>",
+                "text": "",
+                "artist": "范寬（約950–1032後）",
+                "year": "北宋（約11世紀初）",
+                "medium": "絹本水墨，206.3×103.3 公分",
+                "collection": "國立故宮博物院｜國寶｜鎮院三寶之首",
+                "metaNotes": "董其昌題「宋畫第一」。畫面巨壁山崖佔據三分之二，樹叢中隱現商旅驢隊，展現宋人對山川的敬畏之心。每十年僅展出數十天。"
+            },
+            "south": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/%E6%97%A9%E6%98%A5%E5%9B%BE%E8%BD%B4.%E5%8C%97%E5%AE%8B.%E9%83%AD%E7%86%99%E7%BB%98.%E7%BB%A2%E6%9C%AC%E6%B5%85%E8%AE%BE%E8%89%B2.%E5%AE%8B%E7%A5%9E%E5%AE%97%E7%86%99%E5%AE%81%E4%BA%94%E5%B9%B4.%E5%8F%B0%E5%8C%97%E6%95%85%E5%AE%AB%E5%8D%9A%E7%89%A9%E9%99%A2%E8%97%8F.tif/lossy-page1-500px-%E6%97%A9%E6%98%A5%E5%9B%BE%E8%BD%B4.%E5%8C%97%E5%AE%8B.%E9%83%AD%E7%86%99%E7%BB%98.%E7%BB%A2%E6%9C%AC%E6%B5%85%E8%AE%BE%E8%89%B2.%E5%AE%8B%E7%A5%9E%E5%AE%97%E7%86%99%E5%AE%81%E4%BA%94%E5%B9%B4.%E5%8F%B0%E5%8C%97%E6%95%85%E5%AE%AB%E5%8D%9A%E7%89%A9%E9%99%A2%E8%97%8F.tif.jpg",
+                "desc": "<b>早春圖</b>",
+                "text": "",
+                "artist": "郭熙（約1023–1087後）",
+                "year": "北宋神宗熙寧五年（1072）",
+                "medium": "絹本淡設色，158.3×108.1 公分",
+                "collection": "國立故宮博物院｜國寶｜鎮院三寶",
+                "metaNotes": "郭熙創「蟹爪樹」筆法，以S形構圖表現春回大地的生機。右下角自題「熙寧壬子」，為存世少數有明確紀年的宋畫巨跡。"
+            },
+            "west": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/%E5%AE%8B%E8%8C%83%E5%AF%AC%E8%B0%BF%E5%B1%B1%E8%A1%8C%E6%97%85%E5%9C%96_%E8%BB%B8.jpg/960px-%E5%AE%8B%E8%8C%83%E5%AF%AC%E8%B0%BF%E5%B1%B1%E8%A1%8C%E6%97%85%E5%9C%96_%E8%BB%B8.jpg",
+                "desc": "<b>谿山行旅圖</b>",
+                "text": "",
+                "artist": "范寬（約950–1032後）",
+                "year": "北宋（約11世紀初）",
+                "medium": "絹本水墨，206.3×103.3 公分",
+                "collection": "國立故宮博物院｜國寶｜鎮院三寶之首",
+                "metaNotes": ""
+            },
+            "east": {
+                "type": "door"
+            }
+        }
+    },
+    "C": {
+        "roomColor": "#1e1e1e",
+        "roomTexture": "",
+        "gridX": 2,
+        "gridY": 1,
+        "customName": "中央過渡廊",
+        "subtitle": "故宮精華特展｜導覽中樞",
+        "voice": "這裡是故宮精華特展的中央廊道，連結六大主題展廳。本展覽精選故宮六十五萬件典藏中最具代表性的國寶，分為青銅禮器、北宋山水、書法經典、玉器工藝、陶瓷之美、宮廷珍玩六大主題呈現。",
+        "walls": {
+            "north": {
+                "type": "door"
+            },
+            "south": {
+                "type": "door"
+            },
+            "west": {
+                "type": "door"
+            },
+            "east": {
+                "type": "door"
+            }
+        }
+    },
+    "D": {
+        "roomColor": "#0e1a0e",
+        "roomTexture": "",
+        "gridX": 3,
+        "gridY": 1,
+        "customName": "玉器工藝廳",
+        "subtitle": "清代｜巧奪天工",
+        "voice": "歡迎來到玉器工藝廳。翠玉白菜以緬甸翡翠天然色澤雕成，白菜葉上攀附螽斯與蝗蟲，象徵多子多孫、生生不息，是清宮工藝登峰造極之作。",
+        "walls": {
+            "north": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/d/de/Jadeite_Cabbage%2C_National_Palace_Museum.jpg",
+                "desc": "<b>翠玉白菜</b>",
+                "text": "",
+                "artist": "清宮造辦處玉匠（佚名）",
+                "year": "清代（約19世紀）",
+                "medium": "翡翠雕刻，18.7×9.1×5.07 公分，2.136公斤",
+                "collection": "國立故宮博物院｜重要古物",
+                "metaNotes": "原為瑾妃宮中陳設盆景，工匠順應翡翠天然深淺色澤，深綠處成菜葉，白處成菜幫，葉面螽斯象徵子孫繁盛。"
+            },
+            "south": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/b/bd/Meat-Shaped_Stone_Gathering_of_Treasures_1.jpg",
+                "desc": "<b>肉形石</b>（東坡肉石）",
+                "text": "",
+                "artist": "自然形成後清宮工匠加工",
+                "year": "清康熙年間入貢（約17世紀末）",
+                "medium": "瑪瑙，5.73×6.6×5.3 公分",
+                "collection": "國立故宮博物院｜重要古物",
+                "metaNotes": "由內蒙古阿拉善左旗親王進貢，瑪瑙天然紋理極似豬皮層次，工匠以染色技法強化毛孔質感，幾可亂真。"
+            },
+            "west": {
+                "type": "door"
+            },
+            "east": {
+                "type": "image",
+                "img": "",
+                "desc": "",
+                "text": "",
+                "artist": "",
+                "year": "",
+                "medium": "",
+                "collection": "",
+                "metaNotes": "清代玉雕以「量材施藝」為最高境界，工匠因材施工，將天然玉料色澤轉化為栩栩如生的果蔬造型。"
+            }
+        }
+    },
+    "E": {
+        "roomColor": "#1a1a2e",
+        "roomTexture": "",
+        "gridX": 1,
+        "gridY": 2,
+        "customName": "書法經典廳",
+        "subtitle": "晉唐宋｜法帖聖境",
+        "voice": "歡迎蒞臨書法經典廳。王羲之快雪時晴帖是乾隆皇帝最鍾愛的三件法帖之一，御題三希堂因此得名。蘇軾寒食帖則被譽為天下第三行書，是宋代文人書法精神的最高體現。",
+        "walls": {
+            "north": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/4/48/The_Calligraphy_Model_Sunny_after_Snow_by_Wang_Xizhi.jpg",
+                "desc": "<b>快雪時晴帖</b>",
+                "text": "",
+                "artist": "王羲之（303–361）",
+                "year": "東晉",
+                "medium": "紙本行書，23×14.8 公分，28字",
+                "collection": "國立故宮博物院｜國寶",
+                "metaNotes": "乾隆帝視為三希之首，御書「天下無雙，古今鮮對」。全文28字，筆勢圓渾流暢，為王羲之傳世最精的小品書跡。"
+            },
+            "south": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/7/7b/%E5%AF%92%E9%A3%9F%E5%B8%96.jpg",
+                "desc": "<b>黃州寒食詩帖</b>",
+                "text": "",
+                "artist": "蘇軾（1037–1101）",
+                "year": "北宋元豐五年（1082）",
+                "medium": "紙本行書，34.2×199.5 公分",
+                "collection": "國立故宮博物院｜國寶",
+                "metaNotes": "蘇軾貶謫黃州第三年所書，融詩書於一體，筆勢由細轉粗、由平緩轉激越，情緒層層推進，被譽為天下第三行書。"
+            },
+            "west": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/%E7%A5%AD%E4%BE%84%E6%96%87%E7%A8%BF%E5%8D%B7.%E5%94%90.%E9%A1%8F%E7%9C%9F%E5%8D%BF.%E7%BA%B8%E6%9C%AC%E8%A1%8C%E4%B9%A6.%E5%8F%B0%E5%8C%97%E6%95%85%E5%AE%AB%E5%8D%9A%E7%89%A9%E9%99%A2%E8%97%8F_%28cropped%29.tif/lossy-page1-1920px-%E7%A5%AD%E4%BE%84%E6%96%87%E7%A8%BF%E5%8D%B7.%E5%94%90.%E9%A1%8F%E7%9C%9F%E5%8D%BF.%E7%BA%B8%E6%9C%AC%E8%A1%8C%E4%B9%A6.%E5%8F%B0%E5%8C%97%E6%95%85%E5%AE%AB%E5%8D%9A%E7%89%A9%E9%99%A2%E8%97%8F_%28cropped%29.tif.jpg",
+                "desc": "<b>祭姪文稿</b>",
+                "text": "",
+                "artist": "顏真卿（709–785）",
+                "year": "唐乾元元年（758）",
+                "medium": "紙本行草，28.3×72.3 公分",
+                "collection": "國立故宮博物院｜國寶",
+                "metaNotes": "顏真卿悼念安史之亂中殉國侄兒顏季明，悲憤書寫，塗改之處盡現真情。被譽為天下第二行書，超越技巧的精神性書跡。"
+            },
+            "east": {
+                "type": "door"
+            }
+        }
+    },
+    "F": {
+        "roomColor": "#1f1209",
+        "roomTexture": "",
+        "gridX": 2,
+        "gridY": 2,
+        "customName": "陶瓷珍品廳",
+        "subtitle": "宋明清｜窯火千年",
+        "voice": "您已進入陶瓷珍品廳。故宮典藏宋代五大名窯及明清官窯精品，本廳呈現汝窯天青釉的千古極品與清代琺瑯彩瓷的巔峰之作，展示中華陶瓷工藝七千年的輝煌。",
+        "walls": {
+            "north": {
+                "type": "door"
+            },
+            "south": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Pillow_in_the_shape_of_a_recumbent_child%2C_Ding_ware.tif/lossy-page1-1280px-Pillow_in_the_shape_of_a_recumbent_child%2C_Ding_ware.tif.jpg",
+                "desc": "<b>定窯白瓷嬰兒枕</b>",
+                "text": "",
+                "artist": "北宋定州窯工匠",
+                "year": "北宋（11–12世紀）",
+                "medium": "定窯白瓷，高18.3 公分",
+                "collection": "國立故宮博物院",
+                "metaNotes": "定窯以象牙白色調著稱，此嬰兒枕造型罕見，孩童神態天真爛漫，代表宋代陶瓷工藝對生活美學的極致追求。"
+            },
+            "west": {
+                "type": "door"
+            },
+            "east": {
+                "type": "door"
+            }
+        }
+    },
+    "G": {
+        "roomColor": "#1c1507",
+        "roomTexture": "",
+        "gridX": 3,
+        "gridY": 2,
+        "customName": "宮廷珍玩廳",
+        "subtitle": "清代｜帝王品味",
+        "voice": "最後一廳為宮廷珍玩廳，呈現清代帝王的審美品味與宮廷工藝。象牙球的鬼斧神工、多寶格的繁複精緻，無不體現工匠以一生技藝向皇權致敬的精神。",
+        "walls": {
+            "north": {
+                "type": "image",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Ivory_Ball_National_Palace_Museum.jpg/360px-Ivory_Ball_National_Palace_Museum.jpg",
+                "desc": "<b>象牙透雕雲龍紋套球</b>",
+                "artist": "清宮造辦處牙雕匠師",
+                "year": "清乾隆年間（18世紀）",
+                "medium": "象牙雕刻，可分離同心球24層",
+                "collection": "國立故宮博物院｜重要古物",
+                "metaNotes": "由整塊象牙雕出層層可獨立旋轉的鏤空球，每層均雕龍鳳紋飾，外徑僅約12公分，為中國牙雕工藝的極致象徵。"
+            },
+            "south": {
+                "type": "text",
+                "text": "<h2 style='color:#c9a96e; margin-bottom:16px;'>國立故宮博物院 精華特展</h2><p style='line-height:2; color:#e0d5c5;'>本展精選故宮六大類別國寶，橫跨三千年中華文明。從西周青銅重器、北宋山水神品，到清代宮廷工藝，每一件文物皆是歷史的無聲見證。</p><br><p style='color:#c9a96e; font-size:0.85em; line-height:1.8;'>📍 國立故宮博物院<br>🗓 台北市士林區至善路二段221號<br>⏰ 週二至週日 09:00–17:00</p>"
+            },
+            "west": {
+                "type": "door"
+            },
+            "east": {
+                "type": "image",
+                "img": "",
+                "desc": "",
+                "text": "",
+                "artist": "",
+                "year": "",
+                "medium": "",
+                "collection": "",
+                "metaNotes": ""
+            }
         }
     }
 };
 
-let routeStops = [];
-let versionHistory = [];
-let currentRoomCode = "A";
+let currentRoomCode = 'A';
+const GRID_SIZE = 5;
+const SCALE_MULTIPLIER = 9.0;
+const WALL_WIDTH = 9.0;
+const WALL_HEIGHT = 5.2;
+let currentUtterance = null;
 let currentFov = 60;
+let routeStops = [];
+let checklist = [];
+let versionHistory = [];
+let nextRoomId = 'H';
 
-// Tab 切換
-function switchTab(id) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    event.target.classList.add('active');
-    document.getElementById(id).classList.add('active');
-    if(id === 'tab-artworks') buildArtworkTableList();
-}
-
-// 吐司通知
-function showToast(m) {
-    const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show');
+// ══════════════════════════════════════════════
+// UI 通用工具
+// ══════════════════════════════════════════════
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function addVersionHistory(act) {
-    const now = new Date().toLocaleTimeString();
-    versionHistory.unshift(`[${now}] ${act}`);
-    const container = document.getElementById('version-history');
-    if(container) container.innerHTML = versionHistory.map(h => `<div>${h}</div>`).join('');
+function switchTab(id) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.currentTarget.classList.add('active');
+
+    if (id === 'tab-artworks') refreshArtworkList();
+    if (id === 'tab-layout') { build2DGridSystem(); buildRoomList(); }
+    if (id === 'tab-info') updateStats();
 }
 
-// 建立 2D 矩陣佈局
+// ══════════════════════════════════════════════
+// 展廳管理
+// ══════════════════════════════════════════════
+function getRoomIds() { return Object.keys(galleryDatabase); }
+
+function buildRoomSelector() {
+    const sel = document.getElementById('room-selector');
+    sel.innerHTML = '';
+    getRoomIds().forEach(key => {
+        const r = galleryDatabase[key];
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `展廳 ${key}：${r.customName || key}`;
+        if (key === currentRoomCode) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function buildRoomList() {
+    const container = document.getElementById('room-list');
+    container.innerHTML = '';
+    getRoomIds().forEach(key => {
+        const r = galleryDatabase[key];
+        const card = document.createElement('div');
+        card.className = 'room-card' + (key === currentRoomCode ? ' active-card' : '');
+        card.innerHTML = `
+            <div class="room-card-color" style="background:${r.roomColor || '#f5f6f8'};"></div>
+            <div class="room-card-info">
+                <div class="room-card-name">展廳 ${key}：${r.customName || '（未命名）'}</div>
+                <div class="room-card-sub">${r.subtitle || ''} &nbsp;|&nbsp; 位置 (${r.gridX},${r.gridY})</div>
+            </div>
+            <div class="room-card-actions">
+                <button class="icon-btn" onclick="selectRoomForEdit('${key}')">✏️</button>
+                <button class="icon-btn danger" onclick="deleteRoom('${key}')" title="刪除">🗑</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function selectRoomForEdit(key) {
+    switchEditingRoom(key);
+    document.querySelectorAll('.tab-btn')[2].click();
+    showToast(`已切換至展廳 ${key}：${galleryDatabase[key].customName || key}`);
+}
+
+function addNewRoom() {
+    const keys = getRoomIds();
+    let id = nextRoomId;
+    while(galleryDatabase[id]) {
+        id = String.fromCharCode(id.charCodeAt(0) + 1);
+    }
+    nextRoomId = String.fromCharCode(id.charCodeAt(0) + 1);
+
+    // 找空位
+    let gx = 0, gy = 0;
+    outer: for(let y=0; y<GRID_SIZE; y++) {
+        for(let x=0; x<GRID_SIZE; x++) {
+            if(!Object.values(galleryDatabase).find(r=>r.gridX===x&&r.gridY===y)) { gx=x; gy=y; break outer; }
+        }
+    }
+    galleryDatabase[id] = {
+        roomColor:"#f5f6f8", roomTexture:"", gridX:gx, gridY:gy,
+        customName:"新展廳", subtitle:"", voice:"",
+        walls:{ north:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, south:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, west:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""}, east:{type:"image",img:"",desc:"",artist:"",year:"",medium:"",collection:"",metaNotes:""} }
+    };
+    buildRoomSelector();
+    build2DGridSystem();
+    buildRoomList();
+    switchEditingRoom(id);
+    updateStats();
+    showToast(`已新增展廳 ${id}`);
+    document.querySelectorAll('.tab-btn')[2].click();
+}
+
+function duplicateCurrentRoom() {
+    const src = galleryDatabase[currentRoomCode];
+    const copy = JSON.parse(JSON.stringify(src));
+    let id = nextRoomId;
+    while(galleryDatabase[id]) id = String.fromCharCode(id.charCodeAt(0)+1);
+    nextRoomId = String.fromCharCode(id.charCodeAt(0)+1);
+    let gx=0,gy=0;
+    outer:for(let y=0;y<GRID_SIZE;y++) for(let x=0;x<GRID_SIZE;x++) {
+        if(!Object.values(galleryDatabase).find(r=>r.gridX===x&&r.gridY===y)){gx=x;gy=y;break outer;}
+    }
+    copy.gridX=gx; copy.gridY=gy; copy.customName=(src.customName||'展廳')+' (複製)';
+    galleryDatabase[id]=copy;
+    buildRoomSelector(); build2DGridSystem(); buildRoomList(); updateStats();
+    showToast(`已複製展廳 ${currentRoomCode} → ${id}`);
+}
+
+function deleteRoom(key) {
+    if(Object.keys(galleryDatabase).length <= 1) { showToast('❌ 至少保留一個展廳'); return; }
+    if(!confirm(`確定刪除展廳 ${key}：${galleryDatabase[key].customName || key}？`)) return;
+    delete galleryDatabase[key];
+    if(currentRoomCode === key) currentRoomCode = Object.keys(galleryDatabase)[0];
+    buildRoomSelector(); build2DGridSystem(); buildRoomList();
+    switchEditingRoom(currentRoomCode);
+    updateStats();
+    showToast(`已刪除展廳 ${key}`);
+}
+
+// ══════════════════════════════════════════════
+// 網格地圖
+// ══════════════════════════════════════════════
 function build2DGridSystem() {
     const container = document.getElementById('space-grid');
     container.innerHTML = '';
-    for(let y=0; y<5; y++) {
-        for(let x=0; x<5; x++) {
+    for(let y=0; y<GRID_SIZE; y++) {
+        for(let x=0; x<GRID_SIZE; x++) {
             const cell = document.createElement('div');
             cell.className = 'grid-cell';
-            
-            let matchedRoomKey = null;
-            Object.keys(galleryDatabase).forEach(k => {
-                if(galleryDatabase[k].gridX === x && galleryDatabase[k].gridY === y) matchedRoomKey = k;
-            });
-
-            if(matchedRoomKey) {
+            const bound = Object.keys(galleryDatabase).find(k => galleryDatabase[k].gridX===x && galleryDatabase[k].gridY===y);
+            if(bound) {
                 cell.classList.add('active-room');
-                if(matchedRoomKey === currentRoomCode) cell.classList.add('selected-editing');
-                cell.innerHTML = `<span class="room-emoji">🏛️</span><span class="room-label">${matchedRoomKey}</span>`;
-                cell.onclick = () => switchEditingRoom(matchedRoomKey);
-            } else {
-                cell.innerHTML = `<span style="color:#e0e0e0;">+</span>`;
-                cell.onclick = () => moveCurrentRoomGridPosition(x, y);
+                cell.innerHTML = `<span class="room-emoji">🏠</span><span>${bound}</span>`;
+                if(bound === currentRoomCode) cell.classList.add('selected-editing');
             }
+            cell.onclick = function() {
+                if(bound && bound !== currentRoomCode) return;
+                galleryDatabase[currentRoomCode].gridX = x;
+                galleryDatabase[currentRoomCode].gridY = y;
+                build2DGridSystem();
+            };
             container.appendChild(cell);
         }
     }
     document.getElementById('current-edit-node').textContent = `編輯中：展廳 ${currentRoomCode}`;
 }
 
-function moveCurrentRoomGridPosition(nx, ny) {
-    const r = galleryDatabase[currentRoomCode];
-    if(!r) return;
-    r.gridX = nx; r.gridY = ny;
-    build2DGridSystem(); buildRoomList(); compileAndRender3D();
-    addVersionHistory(`調整展廳 ${currentRoomCode} 位置至 (${nx},${ny})`);
-}
-
-function buildRoomSelector() {
-    const sel = document.getElementById('room-selector');
-    sel.innerHTML = '';
-    Object.keys(galleryDatabase).sort().forEach(k => {
-        const r = galleryDatabase[k];
-        const opt = document.createElement('option');
-        opt.value = k; opt.textContent = `展廳 ${k} — ${r.customName || '未命名'}`;
-        sel.appendChild(opt);
-    });
-    sel.value = currentRoomCode;
-}
-
-function buildRoomList() {
-    const list = document.getElementById('room-list');
-    list.innerHTML = '';
-    Object.keys(galleryDatabase).sort().forEach(k => {
-        const r = galleryDatabase[k];
-        const card = document.createElement('div');
-        card.className = `room-card ${k === currentRoomCode ? 'active-card' : ''}`;
-        card.onclick = (e) => {
-            if(e.target.tagName !== 'BUTTON') switchEditingRoom(k);
-        };
-
-        card.innerHTML = `
-            <div class="room-card-color" style="background:${r.roomColor || '#f5f6f8'}"></div>
-            <div class="room-card-info">
-                <div class="room-card-name">展廳 ${k}：${r.customName || '未命名'}</div>
-                <div class="room-card-sub">位置網格: (${r.gridX}, ${r.gridY}) | 牆面底色: ${r.roomColor}</div>
-            </div>
-            <div class="room-card-actions">
-                <button class="icon-btn danger" onclick="deleteRoom('${k}')">🗑️</button>
-            </div>
-        `;
-        list.appendChild(card);
-    });
-}
-
-function switchEditingRoom(k) {
+// ══════════════════════════════════════════════
+// 展廳切換與表單讀寫
+// ══════════════════════════════════════════════
+function switchEditingRoom(code) {
     saveCurrentInputsToMemory();
-    currentRoomCode = k;
-    const r = galleryDatabase[k];
-    document.getElementById('room-edit-label').textContent = `🏠 當前展廳：${k}`;
+    currentRoomCode = code;
+    const r = galleryDatabase[code];
+    document.getElementById('room-selector').value = code;
     document.getElementById('room-custom-name').value = r.customName || '';
     document.getElementById('room-subtitle').value = r.subtitle || '';
     document.getElementById('room-color-input').value = r.roomColor || '#f5f6f8';
     document.getElementById('room-texture-input').value = r.roomTexture || '';
     document.getElementById('voice-content').value = r.voice || '';
-    
-    buildRoomSelector(); build2DGridSystem(); buildRoomList(); loadWallData();
-}
-
-function addNewRoom() {
-    const codes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let newCode = "";
-    for(let i=0; i<codes.length; i++) {
-        if(!galleryDatabase[codes[i]]) { newCode = codes[i]; break; }
-    }
-    if(!newCode) { showToast("❌ 展廳數量已達字母上限！"); return; }
-
-    let targetX = 0, targetY = 0, foundEmpty = false;
-    for(let y=0; y<5; y++) {
-        for(let x=0; x<5; x++) {
-            let occ = false;
-            Object.keys(galleryDatabase).forEach(k => {
-                if(galleryDatabase[k].gridX === x && galleryDatabase[k].gridY === y) occ = true;
-            });
-            if(!occ) { targetX = x; targetY = y; foundEmpty = true; break; }
-        }
-        if(foundEmpty) break;
-    }
-
-    galleryDatabase[newCode] = {
-        roomColor: "#f5f6f8", roomTexture: "", gridX: targetX, gridY: targetY,
-        customName: "新展廳", subtitle: "", voice: "",
-        walls: {
-            north: { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" },
-            south: { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" },
-            west: { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" },
-            east: { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" }
-        }
-    };
-    addVersionHistory(`新增展廳 ${newCode}`);
-    switchEditingRoom(newCode); compileAndRender3D();
-}
-
-function duplicateCurrentRoom() {
-    const src = galleryDatabase[currentRoomCode];
-    if(!src) return;
-    const codes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let newCode = "";
-    for(let i=0; i<codes.length; i++) {
-        if(!galleryDatabase[codes[i]]) { newCode = codes[i]; break; }
-    }
-    if(!newCode) { showToast("❌ 無法複製，已達上限"); return; }
-
-    let targetX = 0, targetY = 0, foundEmpty = false;
-    for(let y=0; y<5; y++) {
-        for(let x=0; x<5; x++) {
-            let occ = false;
-            Object.keys(galleryDatabase).forEach(k => {
-                if(galleryDatabase[k].gridX === x && galleryDatabase[k].gridY === y) occ = true;
-            });
-            if(!occ) { targetX = x; targetY = y; foundEmpty = true; break; }
-        }
-        if(foundEmpty) break;
-    }
-
-    galleryDatabase[newCode] = JSON.parse(JSON.stringify(src));
-    galleryDatabase[newCode].gridX = targetX;
-    galleryDatabase[newCode].gridY = targetY;
-    galleryDatabase[newCode].customName += " (複製)";
-    addVersionHistory(`複製展廳 ${currentRoomCode} 至新展廳 ${newCode}`);
-    switchEditingRoom(newCode); compileAndRender3D();
-}
-
-function deleteRoom(k) {
-    if(Object.keys(galleryDatabase).length <= 1) { showToast("❌ 必須保留至少一個展廳！"); return; }
-    if(!confirm(`確定要刪除展廳 ${k} 嗎？此操作不可回復。`)) return;
-    delete galleryDatabase[k];
-    addVersionHistory(`刪除展廳 ${k}`);
-    currentRoomCode = Object.keys(galleryDatabase)[0];
-    switchEditingRoom(currentRoomCode); compileAndRender3D();
+    document.getElementById('room-edit-label').textContent = `展廳 ${code}`;
+    document.getElementById('current-edit-node').textContent = `編輯中：展廳 ${code}`;
+    loadWallData();
+    build2DGridSystem();
+    buildRoomList();
 }
 
 function loadWallData() {
-    const r = galleryDatabase[currentRoomCode]; if(!r) return;
     const dir = document.getElementById('wall-selector').value;
-    let w = r.walls[dir];
-    if(!w) {
-        w = { type: "image", img: "", desc: "", artist: "", year: "", medium: "", collection: "", metaNotes: "" };
-        r.walls[dir] = w;
-    }
-    document.getElementById('wall-type').value = w.type || 'image';
-    document.getElementById('wall-img').value = w.img || '';
-    document.getElementById('wall-desc').value = w.desc || '';
-    document.getElementById('wall-panel-text').value = w.text || '';
-    document.getElementById('meta-artist').value = w.artist || '';
-    document.getElementById('meta-year').value = w.year || '';
-    document.getElementById('meta-medium').value = w.medium || '';
-    document.getElementById('meta-collection').value = w.collection || '';
-    document.getElementById('meta-notes').value = w.metaNotes || '';
-    
-    toggleWallTypeFields(w.type || 'image');
+    const w = (galleryDatabase[currentRoomCode].walls[dir]) || {type:'image'};
+    const type = w.type || 'image';
+    document.getElementById('wall-type').value = type;
+
+    // 先全部清空，再依 type 填入，避免跨類型殘留
+    document.getElementById('wall-img').value = '';
+    document.getElementById('wall-desc').value = '';
+    document.getElementById('wall-panel-text').value = '';
+    document.getElementById('meta-artist').value = '';
+    document.getElementById('meta-year').value = '';
+    document.getElementById('meta-medium').value = '';
+    document.getElementById('meta-collection').value = '';
+    document.getElementById('meta-notes').value = '';
     clearImgPreview();
-    if(w.img) onImgUrlChange(w.img);
+
+    if (type === 'image') {
+        document.getElementById('wall-img').value = w.img || '';
+        document.getElementById('wall-desc').value = w.desc || '';
+        document.getElementById('meta-artist').value = w.artist || '';
+        document.getElementById('meta-year').value = w.year || '';
+        document.getElementById('meta-medium').value = w.medium || '';
+        document.getElementById('meta-collection').value = w.collection || '';
+        document.getElementById('meta-notes').value = w.metaNotes || '';
+        if(w.img) onImgUrlChange(w.img);
+    } else if (type === 'text') {
+        document.getElementById('wall-panel-text').value = w.text || '';
+    }
+
+    toggleWallTypeFields(type);
 }
 
 function toggleWallTypeFields(type) {
-    document.getElementById('type-image-fields').style.display = type==='image'?'block':'none';
-    document.getElementById('type-text-fields').style.display = type==='text'?'block':'none';
-    document.getElementById('type-door-fields').style.display = type==='door'?'block':'none';
+    const imgFields = document.getElementById('type-image-fields');
+    const txtFields = document.getElementById('type-text-fields');
+    const doorFields = document.getElementById('type-door-fields');
+
+    imgFields.style.display = 'none';
+    txtFields.style.display = 'none';
+    doorFields.style.display = 'none';
+
+    if (type === 'image') imgFields.style.display = 'block';
+    else if (type === 'text') txtFields.style.display = 'block';
+    else if (type === 'door') doorFields.style.display = 'block';
+
     saveCurrentInputsToMemory();
 }
 
 function saveCurrentInputsToMemory() {
-    const r = galleryDatabase[currentRoomCode]; if(!r) return;
+    const r = galleryDatabase[currentRoomCode];
+    if(!r) return;
     r.customName = document.getElementById('room-custom-name').value;
     r.subtitle = document.getElementById('room-subtitle').value;
     r.voice = document.getElementById('voice-content').value;
     r.roomColor = document.getElementById('room-color-input').value;
     r.roomTexture = document.getElementById('room-texture-input').value;
-
     const dir = document.getElementById('wall-selector').value;
     const type = document.getElementById('wall-type').value;
-
     if (type === 'image') {
         r.walls[dir] = {
             type,
@@ -733,76 +1125,97 @@ function saveCurrentInputsToMemory() {
             metaNotes: document.getElementById('meta-notes').value
         };
     } else if (type === 'text') {
-        r.walls[dir] = { type, text: document.getElementById('wall-panel-text').value };
-    } else if (type === 'door') {
+        r.walls[dir] = {
+            type, text: document.getElementById('wall-panel-text').value,
+            img: '', desc: '', artist: '', year: '', medium: '', collection: '', metaNotes: ''
+        };
+    } else {
         r.walls[dir] = { type };
     }
-    updateStats();
+    buildRoomSelector();
+}
+
+// ══════════════════════════════════════════════
+// 圖片預覽與驗證
+// ══════════════════════════════════════════════
+let imgDebounceTimer = null;
+function onImgUrlChange(url) {
+    saveCurrentInputsToMemory();
+    clearTimeout(imgDebounceTimer);
+    if(!url.trim()) { clearImgPreview(); return; }
+    imgDebounceTimer = setTimeout(() => previewImage(), 800);
 }
 
 function clearImgPreview() {
-    const p = document.getElementById('img-preview-box'); p.src = ''; p.classList.remove('visible');
-    const s = document.getElementById('img-status'); s.className = 'img-status'; s.textContent = '';
-}
-
-function onImgUrlChange(url) {
-    const s = document.getElementById('img-status');
-    const p = document.getElementById('img-preview-box');
-    if(!url) { clearImgPreview(); return; }
-    p.src = url; p.classList.add('visible');
-    s.className = 'img-status ok'; s.textContent = '⏳ 載入中...';
-    p.onload = () => { s.className = 'img-status ok'; s.textContent = '✅ 連結有效 (經本地檢驗)'; };
-    p.onerror = () => { s.className = 'img-status err'; s.textContent = '❌ 無法載入圖檔 (可能 CORS 阻擋或無效網址)'; };
+    document.getElementById('img-preview-box').classList.remove('visible');
+    document.getElementById('img-status').className = 'img-status';
+    document.getElementById('img-status').textContent = '';
 }
 
 function previewImage() {
-    const url = document.getElementById('wall-img').value;
-    if(url) window.open(url, '_blank'); else showToast('⚠️ 尚未輸入圖片 URL');
+    const url = document.getElementById('wall-img').value.trim();
+    if(!url) { showToast('請先填入圖片網址'); return; }
+    const img = document.getElementById('img-preview-box');
+    const status = document.getElementById('img-status');
+    img.src = url;
+    img.onload = () => {
+        img.classList.add('visible');
+        status.className = 'img-status ok';
+        status.textContent = `✅ 圖片載入成功 (${img.naturalWidth}×${img.naturalHeight}px)`;
+    };
+    img.onerror = () => {
+        img.classList.remove('visible');
+        status.className = 'img-status err';
+        status.textContent = '❌ 圖片無法載入，請確認網址是否正確';
+    };
 }
 
+// ══════════════════════════════════════════════
+// 統計
+// ══════════════════════════════════════════════
 function updateStats() {
-    let rCount = Object.keys(galleryDatabase).length;
-    let artCount = 0; let doorCount = 0;
-    Object.keys(galleryDatabase).forEach(k => {
-        const r = galleryDatabase[k];
-        ['north','south','west','east'].forEach(d => {
-            if(r.walls[d]) {
-                if(r.walls[d].type === 'image' && r.walls[d].img) artCount++;
-                if(r.walls[d].type === 'door') doorCount++;
-            }
-        });
-    });
-    document.getElementById('stat-rooms').textContent = rCount;
-    document.getElementById('stat-artworks').textContent = artCount;
-    document.getElementById('stat-doors').textContent = Math.floor(doorCount / 2);
-}
-
-function buildArtworkTableList() {
-    saveCurrentInputsToMemory();
-    const tbody = document.getElementById('artwork-table-body');
-    tbody.innerHTML = '';
-    let hasArtwork = false;
-
-    Object.keys(galleryDatabase).sort().forEach(k => {
-        const r = galleryDatabase[k];
+    const rooms = Object.values(galleryDatabase);
+    let artworks = 0, doors = 0;
+    rooms.forEach(r => {
         ['north','south','west','east'].forEach(dir => {
             const w = r.walls[dir];
-            if(w && w.type === 'image' && w.img) {
-                hasArtwork = true;
-                const tr = document.createElement('tr');
+            if(w && w.type==='image' && w.img) artworks++;
+            if(w && w.type==='door') doors++;
+        });
+    });
+    document.getElementById('stat-rooms').textContent = rooms.length;
+    document.getElementById('stat-artworks').textContent = artworks;
+    document.getElementById('stat-doors').textContent = doors;
+}
+
+// ══════════════════════════════════════════════
+// 展品清單
+// ══════════════════════════════════════════════
+function refreshArtworkList() {
+    const tbody = document.getElementById('artwork-table-body');
+    tbody.innerHTML = '';
+    let count = 0;
+    Object.keys(galleryDatabase).forEach(key => {
+        const r = galleryDatabase[key];
+        ['north','south','west','east'].forEach(dir => {
+            const w = r.walls[dir];
+            if(w && w.type==='image' && w.img) {
+                count++;
                 const dirLabel = {north:'前牆',south:'後牆',west:'左牆',east:'右牆'}[dir];
+                const tr = document.createElement('tr');
+                const cleanDesc = (w.desc||'').replace(/<[^>]+>/g,'') || '（無標題）';
                 tr.innerHTML = `
-                    <td><img class="thumb" src="${w.img}"></td>
-                    <td><strong>${w.desc || '（無作品名）'}</strong></td>
-                    <td><span class="badge badge-blue">展廳 ${k} (${dirLabel})</span></td>
-                    <td>${w.artist || '—'}</td>
-                    <td>${w.year || '—'}</td>
+                    <td>${w.img ? `<img class="thumb" src="${w.img}" onerror="this.style.display='none'">` : '<span class="no-thumb">🖼️</span>'}</td>
+                    <td><strong>${cleanDesc}</strong><br><span style="color:var(--text-gray);font-size:10px;">${w.medium||''} ${w.year?'·'+w.year:''}</span></td>
+                    <td><span style="font-size:10px; background:var(--bg-light); padding:2px 6px; border-radius:4px;">${key}·${dirLabel}</span></td>
+                    <td style="font-size:11px;">${w.artist||'—'}</td>
+                    <td style="font-size:11px;">${w.year||'—'}</td>
                 `;
                 tbody.appendChild(tr);
             }
         });
     });
-    if(!hasArtwork) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-gray); padding:20px;">尚無展品（請在展廳設定中加入圖片牆）</td></tr>';
+    if(count===0) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-gray); padding:20px;">尚無展品（請在展廳設定中加入圖片牆）</td></tr>';
 }
 
 function exportArtworkCSV() {
@@ -825,260 +1238,109 @@ function exportArtworkCSV() {
 }
 
 // ══════════════════════════════════════════════
-// 動線與備忘錄
+// 動線規劃
 // ══════════════════════════════════════════════
-function buildNav() {}
-function buildMiniMap() {}
-
-function renderRouteStops() {
-    const builder = document.getElementById('route-builder'); builder.innerHTML = '';
-    routeStops.forEach((stop, index) => {
-        if(index > 0) { const arrow = document.createElement('div'); arrow.className = 'route-arrow'; arrow.textContent = '⬇️'; builder.appendChild(arrow); }
-        const item = document.createElement('div'); item.className = 'route-stop';
-        item.innerHTML = `
-            <div class="route-stop-num">${index+1}</div>
-            <div class="route-stop-name">展廳 ${stop.roomCode}</div>
-            <input type="text" class="route-stop-note" placeholder="輸入此導覽站語音提示..." value="${stop.note||''}" oninput="routeStops(${index}).note=this.value">
-            <button class="icon-btn danger" style="padding:2px 6px;" onclick="removeRouteStop(${index})">❌</button>
+function buildRouteUI() {
+    const container = document.getElementById('route-builder');
+    container.innerHTML = '';
+    routeStops.forEach((stop, i) => {
+        if(i>0) { const arrow = document.createElement('div'); arrow.className='route-arrow'; arrow.textContent='↓'; container.appendChild(arrow); }
+        const el = document.createElement('div');
+        el.className = 'route-stop';
+        el.innerHTML = `
+            <div class="route-stop-num">${i+1}</div>
+            <select style="font-size:12px; border:1px solid var(--border-color); border-radius:4px; padding:4px 6px; outline:none;" onchange="routeStops[${i}].roomKey=this.value">
+                ${Object.keys(galleryDatabase).map(k=>`<option value="${k}" ${stop.roomKey===k?'selected':''}>展廳 ${k}：${galleryDatabase[k].customName||k}</option>`).join('')}
+            </select>
+            <input class="route-stop-note" value="${stop.note||''}" placeholder="停留建議..." oninput="routeStops[${i}].note=this.value">
+            <button class="icon-btn danger" onclick="removeRouteStop(${i})">✕</button>
         `;
-        builder.appendChild(item);
+        container.appendChild(el);
     });
 }
-function addRouteStop() { routeStops.push({ roomCode: currentRoomCode, note: "" }); renderRouteStops(); }
-function removeRouteStop(idx) { routeStops.splice(idx,1); renderRouteStops(); }
-function exportRoutePlan() { showToast('動線已自動儲存於 JSON 備份包中'); }
-function saveNotes() { localStorage.setItem('pocket_gallery_notes', document.getElementById('curator-notes').value); document.getElementById('note-saved-time').textContent = '自動儲存時間: ' + new Date().toLocaleTimeString(); }
-function clearNotes() { document.getElementById('curator-notes').value = ''; saveNotes(); }
 
-let checklist = [ {t:"確認高解析度圖檔網址正常", c:false}, {t:"語音導覽文稿校對完畢", c:false}, {t:"環狀參觀動線封閉通道測試", c:false} ];
-function renderChecklist() {
-    const c = document.getElementById('checklist-container'); c.innerHTML = '';
-    checklist.forEach((item, idx) => {
-        const div = document.createElement('div'); div.style.cssText = "display:flex; align-items:center; gap:8px; font-size:12px;";
-        div.innerHTML = `<input type="checkbox" ${item.c?'checked':''} onchange="checklist[${idx}].c=this.checked"><span style="flex:1;">${item.t}</span>`;
-        c.appendChild(div);
-    });
+function addRouteStop() {
+    routeStops.push({ roomKey: Object.keys(galleryDatabase)[0], note:'' });
+    buildRouteUI();
 }
-function addChecklistItem() { const text = prompt("項目名稱："); if(text) { checklist.push({t:text, c:false}); renderChecklist(); } }
+
+function removeRouteStop(i) {
+    routeStops.splice(i,1);
+    buildRouteUI();
+}
+
+function exportRoutePlan() {
+    const expoName = document.getElementById('expo-name').value || '展覽';
+    const timeNormal = document.getElementById('route-time-normal').value || '—';
+    const timeDeep = document.getElementById('route-time-deep').value || '—';
+    let txt = `${expoName} — 訪客動線規劃\n${'='.repeat(40)}\n`;
+    txt += `建議參觀時間：一般 ${timeNormal} 分鐘 / 深度 ${timeDeep} 分鐘\n\n`;
+    routeStops.forEach((stop,i) => {
+        const r = galleryDatabase[stop.roomKey];
+        txt += `${i+1}. 展廳 ${stop.roomKey}：${r?.customName||stop.roomKey}\n`;
+        if(stop.note) txt += `   備注：${stop.note}\n`;
+    });
+    downloadBlob(txt, `${expoName}_動線規劃.txt`, 'text/plain;charset=utf-8');
+    showToast('✅ 動線規劃已匯出');
+}
 
 // ══════════════════════════════════════════════
-// 3D 渲染核心代碼 (A-Frame Engine)
+// 備忘錄
 // ══════════════════════════════════════════════
-function compileAndRender3D() {
-    saveCurrentInputsToMemory();
-    const assets = document.getElementById('main-assets-pool');
-    const world = document.getElementById('dynamic-gallery-world');
-    world.innerHTML = '';
-
-    // 💡 第一處修正點：動態注入 A-Frame <a-assets> 素材緩存，強制啟用 crossOrigin = "anonymous"
-    Object.keys(galleryDatabase).forEach(key => {
-        const r = galleryDatabase[key];
-        ['north','south','west','east'].forEach(dir => {
-            const wall = r.walls[dir];
-            if(wall && wall.type === 'image' && wall.img){
-                const assetId = `asset-${key}-${dir}`;
-                if(!document.getElementById(assetId)){
-                    const img = document.createElement('img');
-                    img.id = assetId;
-                    img.crossOrigin = "anonymous"; // ✨ 關鍵修復：允許跨網域存取 WebGL 紋理
-                    img.src = wall.img;
-                    assets.appendChild(img);
-                }
-            }
-        });
-    });
-
-    const WALL_CONFIGS = {
-        north: { pos: `0 ${WALL_HEIGHT/2} -${ROOM_SIZE/2}`, rot: "0 0 0" },
-        south: { pos: `0 ${WALL_HEIGHT/2} ${ROOM_SIZE/2}`, rot: "0 180 0" },
-        west:  { pos: `-${ROOM_SIZE/2} ${WALL_HEIGHT/2} 0`, rot: "0 90 0" },
-        east:  { pos: `${ROOM_SIZE/2} ${WALL_HEIGHT/2} 0`, rot: "0 -90 0" }
-    };
-
-    Object.keys(galleryDatabase).forEach(roomKey => {
-        const room = galleryDatabase[roomKey];
-        const rx = (room.gridX - 2) * SCALE_MULTIPLIER;
-        const rz = (room.gridY - 2) * SCALE_MULTIPLIER;
-
-        const roomNode = document.createElement('a-entity');
-        roomNode.setAttribute('position', `${rx} 0 ${rz}`);
-
-        const fl = document.createElement('a-plane');
-        fl.setAttribute('id', `floor-${roomKey}`);
-        fl.setAttribute('position', `0 0.01 0`);
-        fl.setAttribute('rotation', `-90 0 0`);
-        fl.setAttribute('width', ROOM_SIZE);
-        fl.setAttribute('height', ROOM_SIZE);
-        fl.setAttribute('color', '#18191d');
-        fl.setAttribute('material', 'roughness: 0.8;');
-        roomNode.appendChild(fl);
-
-        if(room.voice) {
-            const pEnt = document.createElement('a-entity');
-            pEnt.setAttribute('id', `pe-${roomKey}`);
-            pEnt.setAttribute('position', `0 0 0`);
-            const pBox = document.createElement('a-box');
-            pBox.setAttribute('class', 'clickable');
-            pBox.setAttribute('position', `0 1.2 0`);
-            pBox.setAttribute('width', '0.25'); pBox.setAttribute('height', '2.4'); pBox.setAttribute('depth', '0.25');
-            pBox.setAttribute('color', '#4285f4');
-            pBox.onclick = () => playRoomVoiceAudio(room.voice, room.customName||roomKey);
-            pEnt.appendChild(pBox);
-            const spIcon = document.createElement('a-image');
-            spIcon.setAttribute('src', '#ic-speaker');
-            spIcon.setAttribute('position', '0 2.6 0');
-            spIcon.setAttribute('width', '0.4'); spIcon.setAttribute('height', '0.4');
-            pEnt.appendChild(spIcon);
-            roomNode.appendChild(pEnt);
-        }
-
-        ['north','south','west','east'].forEach(dir => {
-            const wData = room.walls[dir] || { type: 'image' };
-            const c = WALL_CONFIGS[dir];
-            const parts = c.pos.split(' ');
-            const wx = parseFloat(parts[0]); const wy = parseFloat(parts[1]); const wz = parseFloat(parts[2]);
-            const wColor = room.roomColor || '#f5f6f8';
-            const wTxt = room.roomTexture || '';
-
-            if(wData.type === 'door') {
-                const dEnt = document.createElement('a-entity');
-                dEnt.setAttribute('position', `${wx} 0 ${wz}`);
-                dEnt.setAttribute('rotation', c.rot);
-                [{x:'-5.25',w:'3.5'},{x:'5.25',w:'3.5'}].forEach(p => {
-                    const lp = document.createElement('a-box');
-                    lp.setAttribute('position',`${p.x} ${wy} 0`);
-                    lp.setAttribute('width',p.w); lp.setAttribute('height',WALL_HEIGHT); lp.setAttribute('depth','0.1');
-                    lp.setAttribute('color',wColor); if(wTxt) lp.setAttribute('src',wTxt);
-                    dEnt.appendChild(lp);
-                });
-                const tb = document.createElement('a-box');
-                tb.setAttribute('position','0 4.45 0');
-                tb.setAttribute('width','7.0'); tb.setAttribute('height','1.5'); tb.setAttribute('depth','0.1');
-                tb.setAttribute('color',wColor); if(wTxt) tb.setAttribute('src',wTxt);
-                dEnt.appendChild(tb);
-                roomNode.appendChild(dEnt);
-            } else {
-                const wBox = document.createElement('a-box');
-                wBox.setAttribute('position',`${wx} ${wy} ${wz}`);
-                wBox.setAttribute('rotation',c.rot);
-                wBox.setAttribute('width',WALL_WIDTH); wBox.setAttribute('height',WALL_HEIGHT); wBox.setAttribute('depth','0.1');
-                wBox.setAttribute('color',wColor); if(wTxt) wBox.setAttribute('src',wTxt);
-                
-                const bb = document.createElement('a-box');
-                bb.setAttribute('position',`0 -${wy-0.05} 0.06`);
-                bb.setAttribute('width',WALL_WIDTH); bb.setAttribute('height','0.12'); bb.setAttribute('depth','0.02');
-                bb.setAttribute('color','#111111');
-                wBox.appendChild(bb);
-
-                if(wData.type === 'image' && wData.img) {
-                    const frame = document.createElement('a-box');
-                    frame.setAttribute('position','0 0 0.06');
-                    frame.setAttribute('width','4.4'); frame.setAttribute('height','3.4'); frame.setAttribute('depth','0.1');
-                    frame.setAttribute('color','#1c1d21');
-                    
-                    const canvas = document.createElement('a-plane');
-                    canvas.setAttribute('position','0 0 0.06');
-                    canvas.setAttribute('width','4.2'); canvas.setAttribute('height','3.2');
-                    canvas.setAttribute('src', `#asset-${roomKey}-${dir}`); // 指定剛剛建立的緩存資產標籤
-
-                    frame.appendChild(canvas);
-                    wBox.appendChild(frame);
-
-                    const labelNode = document.createElement('a-plane');
-                    labelNode.setAttribute('position','0 -2.0 0.07');
-                    labelNode.setAttribute('width','2.8'); labelNode.setAttribute('height','0.8');
-                    labelNode.setAttribute('color','#ffffff');
-                    
-                    let metaText = `value: ${wData.desc || '無題'}\n作者: ${wData.artist || '未知'}\n年代: ${wData.year || '不詳'}`;
-                    const textNode = document.createElement('a-entity');
-                    textNode.setAttribute('text', `value: ${metaText}; color: #222222; align: center; width: 2.6; font: kalyan;`);
-                    textNode.setAttribute('position','0 0 0.01');
-                    labelNode.appendChild(textNode);
-                    wBox.appendChild(labelNode);
-                } else if(wData.type === 'text' && wData.text) {
-                    const board = document.createElement('a-plane');
-                    board.setAttribute('position','0 0 0.06');
-                    board.setAttribute('width','8'); board.setAttribute('height','3.5');
-                    board.setAttribute('color','#ffffff');
-                    board.setAttribute('material','opacity:0.95; shader:flat;');
-                    
-                    const plainTxt = wData.text.replace(/<[^>]+>/g, '\n');
-                    const textNode = document.createElement('a-entity');
-                    textNode.setAttribute('text', `value: ${plainTxt}; color: #111111; align: left; width: 7.2; wrapCount: 40;`);
-                    textNode.setAttribute('position','0 0 0.01');
-                    board.appendChild(textNode);
-                    wBox.appendChild(board);
-                }
-                roomNode.appendChild(wBox);
-            }
-        });
-
-        // 傳送點
-        const nr = document.createElement('a-entity');
-        nr.setAttribute('id', `nr-${roomKey}`);
-        nr.setAttribute('position', `0 0.05 0`);
-        const cb = document.createElement('a-circle');
-        cb.setAttribute('class','clickable');
-        cb.setAttribute('rotation','-90 0 0'); cb.setAttribute('radius','0.5'); cb.setAttribute('color','#ffffff');
-        cb.setAttribute('material','opacity:0.6; shader:flat; depthTest:false;');
-        cb.onclick = function() {
-            executeMove(rx,rz);
-            document.getElementById('room-indicator-overlay').textContent = `當前位置：${room.customName||roomKey}`;
-        };
-        const ai = document.createElement('a-image');
-        ai.setAttribute('src','#arrow');
-        ai.setAttribute('position','0 0.005 0'); ai.setAttribute('rotation','-90 0 0');
-        ai.setAttribute('width','0.35'); ai.setAttribute('height','0.35'); ai.setAttribute('material','depthTest:false;');
-        cb.appendChild(ai); nr.appendChild(cb); roomNode.appendChild(nr);
-
-        world.appendChild(roomNode);
-    });
-
-    const startR = galleryDatabase[Object.keys(galleryDatabase)[0]];
-    if(startR) executeMove((startR.gridX-2)*SCALE_MULTIPLIER,(startR.gridY-2)*SCALE_MULTIPLIER);
-    addVersionHistory('套用 3D 渲染'); showToast('✅ 3D 場景已更新');
+function saveNotes() {
+    const t = new Date().toLocaleString('zh-TW');
+    document.getElementById('note-saved-time').textContent = `最後儲存：${t}`;
 }
 
-function executeMove(tx,tz) {
-    document.getElementById('cameraRig').setAttribute('animation',{
-        property:'position', to:`${tx} 0 ${tz}`, dur:1200, easing:'cubicBezier(0.25,1,0.5,1)'
-    });
+function clearNotes() {
+    if(!confirm('確定清除所有備忘內容？')) return;
+    document.getElementById('curator-notes').value = '';
+    showToast('備忘錄已清除');
 }
 
-function playRoomVoiceAudio(text, name) {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-TW';
-    u.onstart = () => document.getElementById('audio-status').textContent = `🔊 正在播放：${name}`;
-    u.onend = () => document.getElementById('audio-status').textContent = `🔊 靜音中`;
-    window.speechSynthesis.speak(u);
+function addChecklistItem() {
+    const container = document.getElementById('checklist-container');
+    const id = Date.now();
+    checklist.push({id, text:'', done:false});
+    const el = document.createElement('div');
+    el.id = 'chk-'+id;
+    el.style.cssText = 'display:flex; align-items:center; gap:8px; background:var(--bg-light); padding:7px 10px; border-radius:6px; border:1px solid var(--border-color);';
+    el.innerHTML = `
+        <input type="checkbox" onchange="this.nextElementSibling.style.textDecoration=this.checked?'line-through':'none'">
+        <input type="text" placeholder="核取項目..." style="flex:1; border:none; background:none; font-size:12px; outline:none;" oninput="">
+        <button class="icon-btn danger" style="padding:3px 7px;" onclick="document.getElementById('chk-${id}').remove()">✕</button>
+    `;
+    container.appendChild(el);
 }
-function pauseVoice() { window.speechSynthesis.pause(); }
-function resumeVoice() { window.speechSynthesis.resume(); }
-function stopVoice() { window.speechSynthesis.cancel(); document.getElementById('audio-status').textContent='🔊 靜音中'; }
 
 // ══════════════════════════════════════════════
-// 備份與檔案匯出
+// JSON 匯出 / 匯入
 // ══════════════════════════════════════════════
 function exportJSONData() {
     saveCurrentInputsToMemory();
-    const out = {
-        _meta: { exportedAt: new Date().toISOString(), tool: "Pocket Gallery PRO v2.0" },
+    const payload = {
+        _meta: { exportedAt: new Date().toISOString(), tool:'Pocket Gallery PRO v2.0' },
         expoInfo: {
             name: document.getElementById('expo-name').value,
             organizer: document.getElementById('expo-organizer').value,
             start: document.getElementById('expo-start').value,
             end: document.getElementById('expo-end').value,
             venue: document.getElementById('expo-venue').value,
-            desc: document.getElementById('expo-desc').value
+            desc: document.getElementById('expo-desc').value,
         },
-        galleryDatabase, routeStops, curatorNotes: document.getElementById('curator-notes').value
+        galleryDatabase,
+        routeStops,
+        curatorNotes: document.getElementById('curator-notes').value
     };
-    downloadBlob(JSON.stringify(out,null,2), `${out.expoInfo.name || 'gallery'}_backup.json`, 'application/json');
-    addVersionHistory('匯出備份 JSON'); showToast('💾 JSON 備份下載成功');
+    const name = (document.getElementById('expo-name').value || 'gallery') + '_backup.json';
+    downloadBlob(JSON.stringify(payload, null, 2), name, 'application/json');
+    addVersionHistory('備份 JSON');
+    showToast('✅ JSON 備份已下載');
 }
 
 function importJSON(input) {
-    const file = input.files[0]; if(!file) return;
+    const file = input.files[0];
+    if(!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
@@ -1096,283 +1358,500 @@ function importJSON(input) {
                 }
                 if(data.routeStops) routeStops = data.routeStops;
                 if(data.curatorNotes) document.getElementById('curator-notes').value = data.curatorNotes;
-                
                 currentRoomCode = Object.keys(galleryDatabase)[0];
                 buildRoomSelector(); build2DGridSystem(); buildRoomList();
-                switchEditingRoom(currentRoomCode); compileAndRender3D(); updateStats();
+                switchEditingRoom(currentRoomCode);
+                updateStats();
                 showToast('✅ JSON 備份匯入成功');
-            } else { showToast('❌ 檔案格式不符，無法匯入'); }
-        } catch(err) { showToast('❌ JSON 解析失敗：' + err.message); }
+            } else {
+                showToast('❌ 檔案格式不符，無法匯入');
+            }
+        } catch(err) {
+            showToast('❌ JSON 解析失敗：' + err.message);
+        }
     };
-    reader.readAsText(file); input.value = '';
+    reader.readAsText(file);
+    input.value = '';
 }
 
-function downloadBlob(content, filename, contentType) {
-    const blob = new Blob([content], { type: contentType });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
-}
-
-// 拖曳上傳
+// 拖曳匯入
 const importZone = document.getElementById('import-zone');
-importZone.addEventListener('dragover', (e) => { e.preventDefault(); importZone.classList.add('dragover'); });
+importZone.addEventListener('dragover', e => { e.preventDefault(); importZone.classList.add('dragover'); });
 importZone.addEventListener('dragleave', () => importZone.classList.remove('dragover'));
-importZone.addEventListener('drop', (e) => {
+importZone.addEventListener('drop', e => {
     e.preventDefault(); importZone.classList.remove('dragover');
     const file = e.dataTransfer.files[0];
     if(file && file.name.endsWith('.json')) {
-        const input = document.getElementById('json-file-input');
-        const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
-        importJSON(input);
-    } else { showToast('❌ 請拖曳有效的 .json 檔案'); }
+        const fakeInput = { files:[file] };
+        importJSON(fakeInput);
+    } else showToast('請拖曳 .json 格式的備份檔');
 });
 
+function addVersionHistory(action) {
+    const t = new Date().toLocaleString('zh-TW');
+    versionHistory.unshift(`${t}：${action}`);
+    if(versionHistory.length>20) versionHistory.pop();
+    const container = document.getElementById('version-history');
+    container.innerHTML = versionHistory.map(v=>`<div style="padding:4px 0; border-bottom:1px solid #f0f0f0;">${v}</div>`).join('');
+}
+
+function downloadBlob(content, filename, type) {
+    const blob = new Blob([content], {type});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
 // ══════════════════════════════════════════════
-// 📦 輸出獨立靜態 HTML 網頁
+// Canvas 中文渲染
+// ══════════════════════════════════════════════
+function renderHtmlToCanvasTexture(htmlText, fontSize, fontColor, textAlign, callback) {
+    const canvas = document.getElementById('hidden-canvas-encoder');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const data = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768">
+        <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'Microsoft JhengHei','微軟正黑體',sans-serif;padding:40px;color:${fontColor};font-size:${fontSize}px;line-height:1.5;text-align:${textAlign};">
+                ${htmlText}
+            </div>
+        </foreignObject>
+    </svg>`;
+    const img = new Image();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
+    img.onload = function() { ctx.drawImage(img,0,0); callback(canvas.toDataURL()); };
+}
+
+// ══════════════════════════════════════════════
+// 3D 渲染
+// ══════════════════════════════════════════════
+function compileAndRender3D() {
+    saveCurrentInputsToMemory();
+    const world = document.getElementById('dynamic-gallery-world');
+    world.innerHTML = '';
+
+    Object.keys(galleryDatabase).forEach(roomKey => {
+        const room = galleryDatabase[roomKey];
+        const rx = (room.gridX-2)*SCALE_MULTIPLIER;
+        const rz = (room.gridY-1)*SCALE_MULTIPLIER;
+        const wColor = room.roomColor || '#f5f6f8';
+        const wTxt = room.roomTexture || '';
+
+        const wallConfig = [
+            {dir:'north', pos:`0 ${WALL_HEIGHT/2} -4.5`, rot:'0 0 0'},
+            {dir:'south', pos:`0 ${WALL_HEIGHT/2} 4.5`, rot:'0 180 0'},
+            {dir:'west', pos:`-4.5 ${WALL_HEIGHT/2} 0`, rot:'0 90 0'},
+            {dir:'east', pos:`4.5 ${WALL_HEIGHT/2} 0`, rot:'0 -90 0'}
+        ];
+
+        wallConfig.forEach(c => {
+            const wData = room.walls[c.dir] || {type:'image'};
+            const parts = c.pos.split(' ');
+            const wx = rx + parseFloat(parts[0]);
+            const wy = parseFloat(parts[1]);
+            const wz = rz + parseFloat(parts[2]);
+
+            if(wData.type === 'door') {
+                const dEnt = document.createElement('a-entity');
+                dEnt.setAttribute('position', `${wx} 0 ${wz}`);
+                dEnt.setAttribute('rotation', c.rot);
+                [{x:'-3.25',w:'2.5'},{x:'3.25',w:'2.5'}].forEach(p => {
+                    const lp = document.createElement('a-box');
+                    lp.setAttribute('position',`${p.x} ${wy} 0`);
+                    lp.setAttribute('width',p.w); lp.setAttribute('height',WALL_HEIGHT); lp.setAttribute('depth','0.1'); lp.setAttribute('color',wColor);
+                    if(wTxt) lp.setAttribute('src',wTxt);
+                    dEnt.appendChild(lp);
+                });
+                const tb = document.createElement('a-box');
+                tb.setAttribute('position','0 4.45 0');
+                tb.setAttribute('width','4.0'); tb.setAttribute('height','1.5'); tb.setAttribute('depth','0.1'); tb.setAttribute('color',wColor);
+                if(wTxt) tb.setAttribute('src',wTxt);
+                dEnt.appendChild(tb);
+                world.appendChild(dEnt);
+            } else {
+                const wBox = document.createElement('a-box');
+                wBox.setAttribute('position',`${wx} ${wy} ${wz}`);
+                wBox.setAttribute('rotation',c.rot);
+                wBox.setAttribute('width',WALL_WIDTH); wBox.setAttribute('height',WALL_HEIGHT); wBox.setAttribute('depth','0.1'); wBox.setAttribute('color',wColor);
+                if(wTxt) wBox.setAttribute('src',wTxt);
+
+                const bb = document.createElement('a-box');
+                bb.setAttribute('position',`0 -${wy-0.05} 0.06`);
+                bb.setAttribute('width',WALL_WIDTH); bb.setAttribute('height','0.12'); bb.setAttribute('depth','0.02'); bb.setAttribute('color','#111111');
+                wBox.appendChild(bb);
+
+                if(wData.type === 'image' && wData.img) {
+                    // 組合完整詮釋資料標籤
+                    const metaLines = [];
+                    if(wData.desc) metaLines.push(`<div style="font-size:28px; font-weight:bold; margin-bottom:6px;">${wData.desc}</div>`);
+                    const subParts = [];
+                    if(wData.artist) subParts.push(wData.artist);
+                    if(wData.year) subParts.push(wData.year);
+                    if(subParts.length) metaLines.push(`<div style="font-size:22px; color:#cccccc;">${subParts.join('　·　')}</div>`);
+                    if(wData.medium) metaLines.push(`<div style="font-size:19px; color:#aaaaaa; margin-top:4px;">媒材：${wData.medium}</div>`);
+                    if(wData.collection) metaLines.push(`<div style="font-size:19px; color:#aaaaaa;">典藏：${wData.collection}</div>`);
+                    if(wData.metaNotes) metaLines.push(`<div style="font-size:17px; color:#888888; margin-top:8px; border-top:1px solid #555; padding-top:8px;">${wData.metaNotes}</div>`);
+                    const hasAnyMeta = metaLines.length > 0;
+                    const labelHeight = wData.metaNotes ? 1.2 : (wData.medium || wData.collection ? 0.9 : 0.5);
+
+                    const fr = document.createElement('a-box');
+                    fr.setAttribute('position','0 0.3 0.06');
+                    fr.setAttribute('width','2.2'); fr.setAttribute('height','2.8'); fr.setAttribute('depth','0.08'); fr.setAttribute('color','#1e1610');
+                    const pl = document.createElement('a-plane');
+                    pl.setAttribute('position','0 0.15 0.045');
+                    pl.setAttribute('width','2.0'); pl.setAttribute('height','2.3'); pl.setAttribute('src',wData.img);
+
+                    // 依實際圖片比例動態調整外框與畫面尺寸
+                    (function(capturedPl, capturedFr, capturedImg, capturedDesc, capturedArtist, capturedYear) {
+                        const MAX_W = 2.0, MAX_H = 2.3;
+                        const tmpImg = new Image();
+                        tmpImg.crossOrigin = 'anonymous';
+                        tmpImg.onload = function() {
+                            const ratio = tmpImg.naturalWidth / tmpImg.naturalHeight;
+                            let fw, fh;
+                            if (ratio >= MAX_W / MAX_H) {
+                                fw = MAX_W; fh = Math.round((MAX_W / ratio) * 100) / 100;
+                            } else {
+                                fh = MAX_H; fw = Math.round((MAX_H * ratio) * 100) / 100;
+                            }
+                            capturedPl.setAttribute('width', fw);
+                            capturedPl.setAttribute('height', fh);
+                            // 同步外框寬高（加邊框餘量）
+                            capturedFr.setAttribute('width', String(fw + 0.2));
+                            capturedFr.setAttribute('height', String(fh + 0.5));
+                        };
+                        tmpImg.onerror = function() {}; // 保留預設尺寸
+                        tmpImg.src = capturedImg;
+
+                        // 點擊畫框 → 全圖 Lightbox
+                        capturedPl.setAttribute('class','clickable');
+                        const subStr = [capturedArtist, capturedYear].filter(Boolean).join('　·　');
+                        capturedPl.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            openLightbox(capturedImg, capturedDesc, subStr);
+                        });
+                        capturedPl.addEventListener('mouseenter', function() {
+                            capturedPl.setAttribute('material','color:#eeeeee; side:front');
+                        });
+                        capturedPl.addEventListener('mouseleave', function() {
+                            capturedPl.setAttribute('material','color:#ffffff; side:front');
+                        });
+                    })(pl, fr, wData.img, wData.desc || '', wData.artist || '', wData.year || '');
+
+                    fr.appendChild(pl);
+                    if(hasAnyMeta) {
+                        // 深色標籤底板
+                        const labelBg = document.createElement('a-box');
+                        labelBg.setAttribute('position', `0 ${-1.05 - labelHeight/2 + 0.05} 0.05`);
+                        labelBg.setAttribute('width','2.18'); labelBg.setAttribute('height', String(labelHeight + 0.1)); labelBg.setAttribute('depth','0.02');
+                        labelBg.setAttribute('color','#111111');
+                        fr.appendChild(labelBg);
+
+                        const dp = document.createElement('a-plane');
+                        dp.setAttribute('position', `0 ${-1.05 - labelHeight/2 + 0.05} 0.065`);
+                        dp.setAttribute('width','2.0'); dp.setAttribute('height', String(labelHeight));
+                        dp.setAttribute('material','shader: flat; transparent: true;');
+                        const labelHtml = `<div style="padding:12px 16px; line-height:1.5;">${metaLines.join('')}</div>`;
+                        renderHtmlToCanvasTexture(labelHtml, 20, '#ffffff', 'left', du => dp.setAttribute('src', du));
+                        fr.appendChild(dp);
+                    }
+                    wBox.appendChild(fr);
+                } else if(wData.type === 'text' && wData.text) {
+                    const tp = document.createElement('a-plane');
+                    tp.setAttribute('position','0 0.2 0.06');
+                    tp.setAttribute('width','6.5'); tp.setAttribute('height','4.0');
+                    tp.setAttribute('material','shader: flat; transparent: true;');
+                    renderHtmlToCanvasTexture(wData.text,28,'#202124','center',du => tp.setAttribute('src',du));
+                    wBox.appendChild(tp);
+                }
+                world.appendChild(wBox);
+            }
+        });
+
+        // 聲音柱
+        const pEnt = document.createElement('a-entity');
+        pEnt.setAttribute('position',`${rx} 0 ${rz-2.0}`);
+        pEnt.setAttribute('animation',`property:position; to:${rx} 0.08 ${rz-2.0}; dir:alternate; dur:2000; loop:true; easing:easeInOutQuad`);
+        const cy = document.createElement('a-cylinder');
+        cy.setAttribute('color','#6ba4e8'); cy.setAttribute('height','1.8'); cy.setAttribute('radius','0.04');
+        cy.setAttribute('material','emissive:#6ba4e8; emissiveIntensity:0.6; opacity:0.25; transparent:true'); cy.setAttribute('position','0 0.7 0');
+        pEnt.appendChild(cy);
+        const cc = document.createElement('a-circle');
+        cc.setAttribute('class','clickable'); cc.setAttribute('position','0 1.95 0'); cc.setAttribute('radius','0.22'); cc.setAttribute('color','#1a73e8'); cc.setAttribute('material','shader:flat; depthTest:false');
+        cc.onclick = function() {
+            window.speechSynthesis.cancel();
+            let vt = room.voice || "";
+            if(!vt) return;
+            currentUtterance = new SpeechSynthesisUtterance(vt);
+            currentUtterance.lang = 'zh-TW';
+            window.speechSynthesis.speak(currentUtterance);
+            document.getElementById('audio-status').textContent = `🔊 ${room.customName||roomKey}`;
+        };
+        const sp = document.createElement('a-image');
+        sp.setAttribute('src','#ic-speaker'); sp.setAttribute('width','0.24'); sp.setAttribute('height','0.24');
+        cc.appendChild(sp); pEnt.appendChild(cc); world.appendChild(pEnt);
+
+        // 地板點擊區（整個房間地板可點擊傳送）
+        const floorEnt = document.createElement('a-entity');
+        floorEnt.setAttribute('position', `${rx} 0 ${rz}`);
+
+        // 大型透明地板點擊面板（覆蓋整個房間 8x8）
+        const floorPlane = document.createElement('a-plane');
+        floorPlane.setAttribute('class', 'clickable floor-tile');
+        floorPlane.setAttribute('rotation', '-90 0 0');
+        floorPlane.setAttribute('width', '8.5');
+        floorPlane.setAttribute('height', '8.5');
+        floorPlane.setAttribute('color', '#ffffff');
+        floorPlane.setAttribute('material', 'opacity:0.0; transparent:true; shader:flat; depthTest:false; side:double');
+        floorPlane.setAttribute('data-room', roomKey);
+        floorPlane.setAttribute('data-rx', rx);
+        floorPlane.setAttribute('data-rz', rz);
+        floorPlane.setAttribute('data-name', room.customName || roomKey);
+        (function(capturedRx, capturedRz, capturedName) {
+            floorPlane.addEventListener('click', function(e) {
+                // 計算點擊在地板上的精確位置
+                if (e.detail && e.detail.intersection) {
+                    const pt = e.detail.intersection.point;
+                    executeMove(pt.x, pt.z);
+                } else {
+                    executeMove(capturedRx, capturedRz);
+                }
+                document.getElementById('room-indicator-overlay').textContent = `當前位置：${capturedName}`;
+            });
+            floorPlane.addEventListener('mouseenter', function() {
+                floorPlane.setAttribute('material', 'opacity:0.06; transparent:true; shader:flat; color:#a0d0ff; depthTest:false; side:double');
+                const lbl = document.getElementById('floor-hover-label');
+                if(lbl) { lbl.textContent = `前往：${capturedName}`; lbl.style.opacity = '1'; }
+            });
+            floorPlane.addEventListener('mouseleave', function() {
+                floorPlane.setAttribute('material', 'opacity:0.0; transparent:true; shader:flat; depthTest:false; side:double');
+                const lbl = document.getElementById('floor-hover-label');
+                if(lbl) { lbl.style.opacity = '0'; }
+            });
+        })(rx, rz, room.customName || roomKey);
+
+        floorEnt.appendChild(floorPlane);
+
+        // 中心導引箭頭圓圈（小型，裝飾用）
+        const nr = document.createElement('a-entity');
+        nr.setAttribute('position',`${rx} 0.02 ${rz}`);
+        const cb = document.createElement('a-circle');
+        cb.setAttribute('class','clickable'); cb.setAttribute('rotation','-90 0 0'); cb.setAttribute('radius','0.5'); cb.setAttribute('color','#ffffff'); cb.setAttribute('material','opacity:0.6; shader:flat; depthTest:false;');
+        (function(capturedRx, capturedRz, capturedName) {
+            cb.onclick = function() {
+                executeMove(capturedRx, capturedRz);
+                document.getElementById('room-indicator-overlay').textContent = `當前位置：${capturedName}`;
+            };
+        })(rx, rz, room.customName || roomKey);
+        const ai = document.createElement('a-image');
+        ai.setAttribute('src','#arrow'); ai.setAttribute('position','0 0.005 0'); ai.setAttribute('rotation','-90 0 0'); ai.setAttribute('width','0.35'); ai.setAttribute('height','0.35'); ai.setAttribute('material','depthTest:false;');
+        cb.appendChild(ai); nr.appendChild(cb); world.appendChild(floorEnt); world.appendChild(nr);
+    });
+
+    const startR = galleryDatabase[Object.keys(galleryDatabase)[0]];
+    if(startR) executeMove((startR.gridX-2)*SCALE_MULTIPLIER,(startR.gridY-1)*SCALE_MULTIPLIER);
+    addVersionHistory('套用 3D 渲染');
+    showToast('✅ 3D 場景已更新');
+}
+
+function executeMove(tx, tz) {
+    const rig = document.getElementById('cameraRig');
+    const start = rig.getAttribute('position');
+    const sx = start.x, sz = start.z;
+    const dx = tx - sx, dz = tz - sz;
+    const dur = 1200;
+    const t0 = performance.now();
+    function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+    function step(now) {
+        const t = Math.min((now - t0) / dur, 1);
+        const e = easeInOut(t);
+        // 只更新 position，完全不動 rotation，保留使用者視角
+        rig.setAttribute('position', { x: sx + dx*e, y: 0, z: sz + dz*e });
+        if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+function pauseVoice() { window.speechSynthesis.pause(); }
+function resumeVoice() { window.speechSynthesis.resume(); }
+function stopVoice() { window.speechSynthesis.cancel(); document.getElementById('audio-status').textContent='🔊 靜音中'; }
+
+// ══════════════════════════════════════════════
+// 滾輪縮放
+// ══════════════════════════════════════════════
+document.getElementById('viewport-container').addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const cam = document.getElementById('userView');
+    currentFov = Math.max(20, Math.min(85, currentFov + e.deltaY*0.04));
+    cam.setAttribute('camera','fov',currentFov);
+}, {passive:false});
+
+// ══════════════════════════════════════════════
+// 輸出獨立 HTML
 // ══════════════════════════════════════════════
 function generateStandaloneHTML() {
     saveCurrentInputsToMemory();
     const expoName = document.getElementById('expo-name').value || '藝廊展覽';
     const dbJson = JSON.stringify(galleryDatabase);
-    const routeJson = JSON.stringify(routeStops);
-    const expoDesc = document.getElementById('expo-desc').value || '沉浸式虛擬藝廊展覽';
-    const expoOrganizer = document.getElementById('expo-organizer').value || '線上策展中心';
 
-    // 💡 第二處修正點：確保點擊輸出按鈕打包成獨立網頁後，內部的 3D 渲染機制也包含 crossOrigin = "anonymous"
     const html = `<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="UTF-8">
-  <title>${expoName} — 3D 虛擬獨立展廳</title>
-  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"><\/script>
-  <style>
-    body { margin: 0; overflow: hidden; background: #0c0d12; font-family: sans-serif; }
-    #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 99; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
-    .card { background: rgba(20,21,26,0.85); color: #fff; padding: 14px 22px; border-radius: 16px; backdrop-filter: blur(8px); pointer-events: auto; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); }
-    h1 { font-size: 18px; margin: 0 0 4px 0; color: #4285f4; }
-    h2 { font-size: 13px; margin: 0 0 10px 0; color: #aaa; font-weight: 400; }
-    p { font-size: 12px; margin: 0; line-height: 1.6; color: #ddd; }
-    #room-label { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(66,133,244,0.9); color: white; padding: 6px 20px; border-radius: 30px; font-size: 13px; font-weight: bold; }
-    #audio-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 8px; font-size: 11px; }
-  <\/style>
-</head>
-<body>
-  <div id="ui-layer">
-    <div class="card">
-      <h1>${expoName}</h1>
-      <h2>主辦單位：${expoOrganizer}</h2>
-      <p>${expoDesc.replace(/\n/g, '<br>')}</p>
-    </div>
-    <div id="room-label">正在載入 3D 展廳...</div>
-  </div>
+<html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${expoName}</title>
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"><\/script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:"Microsoft JhengHei",sans-serif;}
+body{overflow:hidden;background:#0c0d12;}
+#room-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);padding:8px 16px;border-radius:40px;display:flex;gap:6px;flex-wrap:wrap;max-width:90vw;justify-content:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:99;}
+.nav-btn{background:rgba(0,0,0,0.05);border:none;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;}
+.nav-btn:hover{background:#1a73e8;color:white;}
+#room-label{position:fixed;top:16px;left:16px;background:rgba(0,0,0,0.75);color:white;padding:8px 16px;border-radius:20px;font-size:13px;z-index:99;}
+#floor-hint{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:rgba(32,33,36,0.75);color:rgba(255,255,255,0.85);padding:6px 18px;border-radius:20px;font-size:11px;z-index:99;pointer-events:none;}
+#floor-hover-label{position:fixed;bottom:106px;left:50%;transform:translateX(-50%);background:rgba(26,115,232,0.9);color:white;padding:5px 16px;border-radius:14px;font-size:12px;font-weight:500;z-index:99;pointer-events:none;opacity:0;transition:opacity 0.2s;white-space:nowrap;}
+#audio-box{position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.95);padding:7px 14px;border-radius:30px;display:flex;align-items:center;gap:8px;z-index:99;font-size:12px;}
+#hidden-canvas{display:none;}
+#artwork-lightbox{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.92);backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;}
+#artwork-lightbox.open{display:flex;}
+#lightbox-img{max-width:88vw;max-height:78vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 60px rgba(0,0,0,0.8);cursor:default;}
+#lightbox-meta{margin-top:18px;text-align:center;color:rgba(255,255,255,0.9);max-width:600px;padding:0 16px;}
+#lb-title{font-size:18px;font-weight:600;margin-bottom:4px;}
+#lb-sub{font-size:13px;color:rgba(255,255,255,0.6);line-height:1.7;}
+#lightbox-close{position:absolute;top:18px;right:22px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;font-size:22px;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#lightbox-close:hover{background:rgba(255,255,255,0.25);}
+<\/style></head><body>
+<canvas id="hidden-canvas" width="1024" height="768"></canvas>
+<div id="room-label">${expoName}</div>
+<div id="floor-hint">👆 點擊任何展廳地面即可移動至該位置</div>
+<div id="floor-hover-label"></div>
+<div id="audio-box"><span id="aud-status">🔊 靜音中</span><button onclick="window.speechSynthesis.pause()">⏸</button><button onclick="window.speechSynthesis.resume()">▶</button><button onclick="window.speechSynthesis.cancel();document.getElementById('aud-status').textContent='🔊 靜音中'">⏹</button></div>
+<div id="room-nav"></div>
+<div id="artwork-lightbox" onclick="closeLB(event)">
+  <button id="lightbox-close" onclick="closeLB()">✕</button>
+  <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  <div id="lightbox-meta"><div id="lb-title"></div><div id="lb-sub"></div></div>
+</div>
+<a-scene vr-mode-ui="enabled:false" cursor="rayOrigin:mouse" raycaster="objects:.clickable">
+<a-assets><img id="arrow" src="https://i.imgur.com/vHdfS9g.png"><img id="ic-speaker" src="https://img.icons8.com/ios-filled/100/ffffff/speaker.png"></a-assets>
+<a-entity id="rig" position="0 0 0" rotation="0 45 0"><a-entity camera="fov:60" position="0 1.6 0" look-controls="pointerLockEnabled:false; magicWindowTrackingEnabled:false; touchEnabled:true"><\/a-entity><\/a-entity>
+<a-sky color="#0c0d12"><\/a-sky><a-ambient-light color="#fff" intensity="0.9"><\/a-ambient-light>
+<a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200" color="#18191d"><\/a-plane>
+<a-plane position="0 5.2 0" rotation="90 0 0" width="200" height="200" color="#6e5d4f"><\/a-plane>
+<a-entity id="world"><\/a-entity>
+<\/a-scene>
+<script>
+const db=${dbJson};
+const SM=9,WW=9,WH=5.2;
+let curU=null;
+function openLB(src,title,sub){document.getElementById('lb-title').innerHTML=title||'';document.getElementById('lb-sub').textContent=sub||'';document.getElementById('lightbox-img').src=src;document.getElementById('artwork-lightbox').classList.add('open');document.addEventListener('keydown',lbKey);}
+function closeLB(e){if(e&&e.target===document.getElementById('lightbox-img'))return;document.getElementById('artwork-lightbox').classList.remove('open');document.getElementById('lightbox-img').src='';document.removeEventListener('keydown',lbKey);}
+function lbKey(e){if(e.key==='Escape')closeLB();}
+function renderCanvas(h,fs,fc,ta,cb){const cv=document.getElementById('hidden-canvas');const ctx=cv.getContext('2d');ctx.clearRect(0,0,1024,768);const d='<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Microsoft JhengHei,sans-serif;padding:40px;color:'+fc+';font-size:'+fs+'px;line-height:1.5;text-align:'+ta+';">'+h+'<\/div><\/foreignObject><\/svg>';const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(d);img.onload=()=>{ctx.drawImage(img,0,0);cb(cv.toDataURL());};}
+function buildNav(){const nav=document.getElementById('room-nav');nav.innerHTML='';Object.keys(db).forEach(k=>{const b=document.createElement('button');b.className='nav-btn';b.textContent=db[k].customName||('展廳'+k);b.onclick=()=>{const r=db[k];move((r.gridX-2)*SM,(r.gridY-1)*SM);document.getElementById('room-label').textContent=db[k].customName||k;};nav.appendChild(b);});}
+function move(x,z){const rig=document.getElementById('rig');const s=rig.getAttribute('position');const sx=s.x,sz=s.z,dx=x-sx,dz=z-sz,dur=1200,t0=performance.now();function ei(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}function step(now){const t=Math.min((now-t0)/dur,1);rig.setAttribute('position',{x:sx+dx*ei(t),y:0,z:sz+dz*ei(t)});if(t<1)requestAnimationFrame(step);}requestAnimationFrame(step);}
+function build(){const w=document.getElementById('world');w.innerHTML='';
+Object.keys(db).forEach(k=>{const r=db[k];const rx=(r.gridX-2)*SM,rz=(r.gridY-1)*SM,wc=r.roomColor||'#f5f6f8',wt=r.roomTexture||'';
+const wallDefs=[{dir:'north',pos:'0 '+(WH/2)+' -4.5',rot:'0 0 0'},{dir:'south',pos:'0 '+(WH/2)+' 4.5',rot:'0 180 0'},{dir:'west',pos:'-4.5 '+(WH/2)+' 0',rot:'0 90 0'},{dir:'east',pos:'4.5 '+(WH/2)+' 0',rot:'0 -90 0'}];
+wallDefs.forEach(c=>{const wd=r.walls[c.dir]||{type:'image'};const pts=c.pos.split(' ');const ax=rx+parseFloat(pts[0]),ay=parseFloat(pts[1]),az=rz+parseFloat(pts[2]);
+if(wd.type==='door'){const de=document.createElement('a-entity');de.setAttribute('position',ax+' 0 '+az);de.setAttribute('rotation',c.rot);[{x:'-3.25',w:'2.5'},{x:'3.25',w:'2.5'}].forEach(p=>{const lp=document.createElement('a-box');lp.setAttribute('position',p.x+' '+ay+' 0');lp.setAttribute('width',p.w);lp.setAttribute('height',WH);lp.setAttribute('depth','0.1');lp.setAttribute('color',wc);if(wt)lp.setAttribute('src',wt);de.appendChild(lp);});const tb=document.createElement('a-box');tb.setAttribute('position','0 4.45 0');tb.setAttribute('width','4.0');tb.setAttribute('height','1.5');tb.setAttribute('depth','0.1');tb.setAttribute('color',wc);if(wt)tb.setAttribute('src',wt);de.appendChild(tb);w.appendChild(de);}
+else{const wb=document.createElement('a-box');wb.setAttribute('position',ax+' '+ay+' '+az);wb.setAttribute('rotation',c.rot);wb.setAttribute('width',WW);wb.setAttribute('height',WH);wb.setAttribute('depth','0.1');wb.setAttribute('color',wc);if(wt)wb.setAttribute('src',wt);
+const bb=document.createElement('a-box');bb.setAttribute('position','0 -'+(ay-0.05)+' 0.06');bb.setAttribute('width',WW);bb.setAttribute('height','0.12');bb.setAttribute('depth','0.02');bb.setAttribute('color','#111111');wb.appendChild(bb);
+if(wd.type==='image'&&wd.img){
+const ml=[];if(wd.desc)ml.push('<div style="font-size:28px;font-weight:bold;margin-bottom:6px;">'+wd.desc+'<\/div>');const sp2=[];if(wd.artist)sp2.push(wd.artist);if(wd.year)sp2.push(wd.year);if(sp2.length)ml.push('<div style="font-size:22px;color:#cccccc;">'+sp2.join('\u3000·\u3000')+'<\/div>');if(wd.medium)ml.push('<div style="font-size:19px;color:#aaaaaa;margin-top:4px;">媒材：'+wd.medium+'<\/div>');if(wd.collection)ml.push('<div style="font-size:19px;color:#aaaaaa;">典藏：'+wd.collection+'<\/div>');if(wd.metaNotes)ml.push('<div style="font-size:17px;color:#888888;margin-top:8px;border-top:1px solid #555;padding-top:8px;">'+wd.metaNotes+'<\/div>');
+const lh=wd.metaNotes?1.2:(wd.medium||wd.collection?0.9:0.5);
+const fr=document.createElement('a-box');fr.setAttribute('position','0 0.3 0.06');fr.setAttribute('width','2.2');fr.setAttribute('height','2.8');fr.setAttribute('depth','0.08');fr.setAttribute('color','#1e1610');
+const pl=document.createElement('a-plane');pl.setAttribute('position','0 0.15 0.045');pl.setAttribute('width','2.0');pl.setAttribute('height','2.3');pl.setAttribute('src',wd.img);
+(function(cPl,cFr,cImg,cDesc,cArtist,cYear){
+  const MAX_W=2.0,MAX_H=2.3;const ti=new Image();ti.crossOrigin='anonymous';
+  ti.onload=function(){const ratio=ti.naturalWidth/ti.naturalHeight;let fw,fh;if(ratio>=MAX_W/MAX_H){fw=MAX_W;fh=Math.round(MAX_W/ratio*100)/100;}else{fh=MAX_H;fw=Math.round(MAX_H*ratio*100)/100;}cPl.setAttribute('width',fw);cPl.setAttribute('height',fh);cFr.setAttribute('width',String(fw+0.2));cFr.setAttribute('height',String(fh+0.5));};ti.src=cImg;
+  cPl.setAttribute('class','clickable');
+  const sub=[cArtist,cYear].filter(Boolean).join('\u3000·\u3000');
+  cPl.addEventListener('click',function(e){e.stopPropagation();openLB(cImg,cDesc,sub);});
+  cPl.addEventListener('mouseenter',function(){cPl.setAttribute('material','color:#eeeeee;side:front');});
+  cPl.addEventListener('mouseleave',function(){cPl.setAttribute('material','color:#ffffff;side:front');});
+})(pl,fr,wd.img,wd.desc||'',wd.artist||'',wd.year||'');
+fr.appendChild(pl);
+if(ml.length){const bg=document.createElement('a-box');bg.setAttribute('position','0 '+(-1.05-lh/2+0.05)+' 0.05');bg.setAttribute('width','2.18');bg.setAttribute('height',String(lh+0.1));bg.setAttribute('depth','0.02');bg.setAttribute('color','#111111');fr.appendChild(bg);const dp=document.createElement('a-plane');dp.setAttribute('position','0 '+(-1.05-lh/2+0.05)+' 0.065');dp.setAttribute('width','2.0');dp.setAttribute('height',String(lh));dp.setAttribute('material','shader:flat;transparent:true;');renderCanvas('<div style="padding:12px 16px;line-height:1.5;">'+ml.join('')+'<\/div>',20,'#ffffff','left',du=>dp.setAttribute('src',du));fr.appendChild(dp);}
+wb.appendChild(fr);
+}else if(wd.type==='text'&&wd.text){const tp=document.createElement('a-plane');tp.setAttribute('position','0 0.2 0.06');tp.setAttribute('width','6.5');tp.setAttribute('height','4.0');tp.setAttribute('material','shader:flat;transparent:true;');renderCanvas(wd.text,28,'#202124','center',du=>tp.setAttribute('src',du));wb.appendChild(tp);}
+w.appendChild(wb);}});
+const pe=document.createElement('a-entity');pe.setAttribute('position',rx+' 0 '+(rz-2));pe.setAttribute('animation','property:position;to:'+rx+' 0.08 '+(rz-2)+';dir:alternate;dur:2000;loop:true;easing:easeInOutQuad');const cy=document.createElement('a-cylinder');cy.setAttribute('color','#6ba4e8');cy.setAttribute('height','1.8');cy.setAttribute('radius','0.04');cy.setAttribute('material','emissive:#6ba4e8;emissiveIntensity:0.6;opacity:0.25;transparent:true');cy.setAttribute('position','0 0.7 0');pe.appendChild(cy);
+const cc=document.createElement('a-circle');cc.setAttribute('class','clickable');cc.setAttribute('position','0 1.95 0');cc.setAttribute('radius','0.22');cc.setAttribute('color','#1a73e8');cc.setAttribute('material','shader:flat;depthTest:false');
+(function(captK,captR){cc.onclick=function(){window.speechSynthesis.cancel();if(!captR.voice)return;curU=new SpeechSynthesisUtterance(captR.voice);curU.lang='zh-TW';window.speechSynthesis.speak(curU);document.getElementById('aud-status').textContent='🔊 '+(captR.customName||captK);};})(k,r);
+const sp=document.createElement('a-image');sp.setAttribute('src','#ic-speaker');sp.setAttribute('width','0.24');sp.setAttribute('height','0.24');cc.appendChild(sp);pe.appendChild(cc);w.appendChild(pe);
+const floorEnt=document.createElement('a-entity');floorEnt.setAttribute('position',rx+' 0 '+rz);
+const floorPl=document.createElement('a-plane');floorPl.setAttribute('class','clickable');floorPl.setAttribute('rotation','-90 0 0');floorPl.setAttribute('width','8.5');floorPl.setAttribute('height','8.5');floorPl.setAttribute('material','opacity:0.0;transparent:true;shader:flat;depthTest:false;side:double');
+(function(cRx,cRz,cName){
+  floorPl.addEventListener('click',function(e){if(e.detail&&e.detail.intersection){const pt=e.detail.intersection.point;move(pt.x,pt.z);}else{move(cRx,cRz);}document.getElementById('room-label').textContent=cName;});
+  floorPl.addEventListener('mouseenter',function(){floorPl.setAttribute('material','opacity:0.06;transparent:true;shader:flat;color:#a0d0ff;depthTest:false;side:double');const lbl=document.getElementById('floor-hover-label');if(lbl){lbl.textContent='前往：'+cName;lbl.style.opacity='1';}});
+  floorPl.addEventListener('mouseleave',function(){floorPl.setAttribute('material','opacity:0.0;transparent:true;shader:flat;depthTest:false;side:double');const lbl=document.getElementById('floor-hover-label');if(lbl)lbl.style.opacity='0';});
+})(rx,rz,r.customName||k);
+floorEnt.appendChild(floorPl);w.appendChild(floorEnt);
+const nr=document.createElement('a-entity');nr.setAttribute('position',rx+' 0.02 '+rz);const cb=document.createElement('a-circle');cb.setAttribute('class','clickable');cb.setAttribute('rotation','-90 0 0');cb.setAttribute('radius','0.5');cb.setAttribute('color','#ffffff');cb.setAttribute('material','opacity:0.6;shader:flat;depthTest:false;');
+(function(cRx,cRz,cName){cb.onclick=function(){move(cRx,cRz);document.getElementById('room-label').textContent=cName;};})(rx,rz,r.customName||k);
+const ai=document.createElement('a-image');ai.setAttribute('src','#arrow');ai.setAttribute('position','0 0.005 0');ai.setAttribute('rotation','-90 0 0');ai.setAttribute('width','0.35');ai.setAttribute('height','0.35');ai.setAttribute('material','depthTest:false;');cb.appendChild(ai);nr.appendChild(cb);w.appendChild(nr);
+});
+const f=db[Object.keys(db)[0]];if(f)move((f.gridX-2)*SM,(f.gridY-1)*SM);}
+window.onload=()=>{buildNav();build();};
+<\/script></body></html>`;
 
-  <a-scene vr-mode-ui="enabled: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-    <a-assets id="standalone-assets">
-      <img id="arrow" src="https://i.imgur.com/vHdfS9g.png">
-      <img id="ic-speaker" src="https://img.icons8.com/ios-filled/100/ffffff/speaker.png">
-    </a-assets>
-    <a-entity id="rig" position="0 0 0" rotation="0 45 0">
-      <a-entity id="view" camera="fov: 60" position="0 1.6 0" look-controls><\/entity>
-    </a-entity>
-    <a-sky color="#0c0d12"><\/sky>
-    <a-ambient-light color="#ffffff" intensity="0.9"><\/a-ambient-light>
-    <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200" color="#18191d"><\/a-plane>
-    <a-plane position="0 5.2 0" rotation="90 0 0" width="200" height="200" color="#6e5d4f"><\/a-plane>
-    <a-entity id="world"><\/entity>
-  <\/a-scene>
-
-  <script>
-    const db = ${dbJson};
-    const route = ${routeJson};
-    const SM = 16; const ROOM_SIZE = 14; const WALL_WIDTH = 14; const WALL_HEIGHT = 5.2;
-    let curRoom = null;
-
-    function build() {
-      const assets = document.getElementById('standalone-assets');
-      const world = document.getElementById('world');
-
-      // 建立靜態獨立網頁時，為所有動態圖片緩存加上 CORS 授權宣告
-      Object.keys(db).forEach(key => {
-        const r = db[key];
-        ['north','south','west','east'].forEach(dir => {
-          const wall = r.walls[dir];
-          if(wall && wall.type === 'image' && wall.img){
-            const assetId = 'asset-'+key+'-'+dir;
-            if(!document.getElementById(assetId)){
-              const img = document.createElement('img');
-              img.id = assetId;
-              img.crossOrigin = "anonymous"; // ✨ 獨立打包網頁的跨網域關鍵修復
-              img.src = wall.img;
-              assets.appendChild(img);
-            }
-          }
-        });
-      });
-
-      const CONFIGS = {
-        north: { pos: "0 "+(WALL_HEIGHT/2)+" -"+(ROOM_SIZE/2), rot: "0 0 0" },
-        south: { pos: "0 "+(WALL_HEIGHT/2)+" "+(ROOM_SIZE/2), rot: "0 180 0" },
-        west:  { pos: "-"+(ROOM_SIZE/2)+" "+(WALL_HEIGHT/2)+" 0", rot: "0 90 0" },
-        east:  { pos: (ROOM_SIZE/2)+" "+(WALL_HEIGHT/2)+" 0", rot: "0 -90 0" }
-      };
-
-      Object.keys(db).forEach(roomKey => {
-        const room = db[roomKey];
-        const rx = (room.gridX - 2) * SM;
-        const rz = (room.gridY - 2) * SM;
-
-        const roomNode = document.createElement('a-entity');
-        roomNode.setAttribute('position', rx+' 0 '+rz);
-
-        const fl = document.createElement('a-plane');
-        fl.setAttribute('id', 'floor-'+roomKey);
-        fl.setAttribute('position', '0 0.01 0');
-        fl.setAttribute('rotation', '-90 0 0');
-        fl.setAttribute('width', ROOM_SIZE); fl.setAttribute('height', ROOM_SIZE);
-        fl.setAttribute('color', '#18191d');
-        roomNode.appendChild(fl);
-
-        if(room.voice) {
-            const pEnt = document.createElement('a-entity');
-            pEnt.setAttribute('id', 'pe-'+roomKey);
-            const pBox = document.createElement('a-box');
-            pBox.setAttribute('class', 'clickable');
-            pBox.setAttribute('position', '0 1.2 0');
-            pBox.setAttribute('width', '0.25'); pBox.setAttribute('height', '2.4'); pBox.setAttribute('depth', '0.25');
-            pBox.setAttribute('color', '#4285f4');
-            pBox.onclick = () => {
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(room.voice); u.lang='zh-TW';
-                window.speechSynthesis.speak(u);
-            };
-            pEnt.appendChild(pBox);
-            const spIcon = document.createElement('a-image');
-            spIcon.setAttribute('src', '#ic-speaker'); spIcon.setAttribute('position', '0 2.6 0');
-            spIcon.setAttribute('width', '0.4'); spIcon.setAttribute('height', '0.4');
-            pEnt.appendChild(spIcon);
-            roomNode.appendChild(pEnt);
-        }
-
-        ['north','south','west','east'].forEach(dir => {
-          const wData = room.walls[dir] || { type: 'image' };
-          const c = CONFIGS[dir]; const parts = c.pos.split(' ');
-          const wx = parseFloat(parts[0]); const wy = parseFloat(parts[1]); const wz = parseFloat(parts[2]);
-          const wColor = room.roomColor || '#f5f6f8'; const wTxt = room.roomTexture || '';
-
-          if(wData.type === 'door') {
-            const dEnt = document.createElement('a-entity');
-            dEnt.setAttribute('position', wx+' 0 '+wz); dEnt.setAttribute('rotation', c.rot);
-            [{x:'-5.25',w:'3.5'},{x:'5.25',w:'3.5'}].forEach(p => {
-              const lp = document.createElement('a-box');
-              lp.setAttribute('position',p.x+' '+wy+' 0');
-              lp.setAttribute('width',p.w); lp.setAttribute('height',WALL_HEIGHT); lp.setAttribute('depth','0.1');
-              lp.setAttribute('color',wColor); if(wTxt) lp.setAttribute('src',wTxt);
-              dEnt.appendChild(lp);
-            });
-            const tb = document.createElement('a-box');
-            tb.setAttribute('position','0 4.45 0');
-            tb.setAttribute('width','7.0'); tb.setAttribute('height','1.5'); tb.setAttribute('depth','0.1');
-            tb.setAttribute('color',wColor); if(wTxt) tb.setAttribute('src',wTxt);
-            dEnt.appendChild(tb);
-            roomNode.appendChild(dEnt);
-          } else {
-            const wBox = document.createElement('a-box');
-            wBox.setAttribute('position',wx+' '+wy+' '+wz); wBox.setAttribute('rotation',c.rot);
-            wBox.setAttribute('width',WALL_WIDTH); wBox.setAttribute('height',WALL_HEIGHT); wBox.setAttribute('depth','0.1');
-            wBox.setAttribute('color',wColor); if(wTxt) wBox.setAttribute('src',wTxt);
-
-            if(wData.type === 'image' && wData.img) {
-              const frame = document.createElement('a-box');
-              frame.setAttribute('position','0 0 0.06');
-              frame.setAttribute('width','4.4'); frame.setAttribute('height','3.4'); frame.setAttribute('depth','0.1');
-              frame.setAttribute('color','#1c1d21');
-
-              const canvas = document.createElement('a-plane');
-              canvas.setAttribute('position','0 0 0.06');
-              canvas.setAttribute('width','4.2'); canvas.setAttribute('height','3.2');
-              canvas.setAttribute('src', '#asset-'+roomKey+'-'+dir);
-              frame.appendChild(canvas); wBox.appendChild(frame);
-
-              const labelNode = document.createElement('a-plane');
-              labelNode.setAttribute('position','0 -2.0 0.07');
-              labelNode.setAttribute('width','2.8'); labelNode.setAttribute('height','0.8');
-              labelNode.setAttribute('color','#ffffff');
-              let metaText = 'value: '+(wData.desc||'無題')+'\\n作者: '+(wData.artist||'未知')+'\\n年代: '+(wData.year||'不詳');
-              const textNode = document.createElement('a-entity');
-              textNode.setAttribute('text', 'value: '+metaText+'; color: #222222; align: center; width: 2.6;');
-              textNode.setAttribute('position','0 0 0.01');
-              labelNode.appendChild(textNode); wBox.appendChild(labelNode);
-            } else if(wData.type === 'text' && wData.text) {
-              const board = document.createElement('a-plane');
-              board.setAttribute('position','0 0 0.06');
-              board.setAttribute('width','8'); board.setAttribute('height','3.5');
-              board.setAttribute('color','#ffffff');
-              const textNode = document.createElement('a-entity');
-              textNode.setAttribute('text', 'value: '+wData.text.replace(/<[^>]+>/g, '\\n')+'; color: #111111; width: 7.2;');
-              textNode.setAttribute('position','0 0 0.01');
-              board.appendChild(textNode); wBox.appendChild(board);
-            }
-            roomNode.appendChild(wBox);
-          }
-        });
-
-        const nr = document.createElement('a-entity');
-        nr.setAttribute('id', 'nr-'+roomKey); nr.setAttribute('position', '0 0.05 0');
-        const cb = document.createElement('a-circle');
-        cb.setAttribute('class','clickable');
-        cb.setAttribute('rotation','-90 0 0'); cb.setAttribute('radius','0.5'); cb.setAttribute('color','#ffffff');
-        cb.setAttribute('material','opacity:0.6; shader:flat; depthTest:false;');
-        cb.onclick = function() {
-          teleport(rx, rz, roomKey);
-        };
-        const ai = document.createElement('a-image');
-        ai.setAttribute('src','#arrow'); ai.setAttribute('position','0 0.005 0'); ai.setAttribute('rotation','-90 0 0');
-        ai.setAttribute('width','0.35'); ai.setAttribute('height','0.35'); ai.setAttribute('material','depthTest:false;');
-        cb.appendChild(ai); nr.appendChild(cb); roomNode.appendChild(nr);
-        world.appendChild(roomNode);
-      });
-
-      const f = db[Object.keys(db)[0]];
-      if(f){ const fk = Object.keys(db)[0]; teleport((f.gridX-2)*SM, (f.gridY-2)*SM, fk); }
-    }
-
-    function teleport(x,z,roomKey) {
-      document.getElementById('rig').setAttribute('animation',{property:'position',to:x+' 0 '+z,dur:1200,easing:'cubicBezier(0.25,1,0.5,1)'});
-      if(roomKey) setTimeout(()=>setRoom(roomKey),200);
-    }
-
-    function setRoom(k){
-      if(curRoom===k) return; curRoom=k; const r=db[k];
-      document.getElementById('room-label').textContent=r.customName||k;
-      Object.keys(db).forEach(key=>{
-        const pe=document.getElementById('pe-'+key); const nr=document.getElementById('nr-'+key);
-        if(pe) pe.setAttribute('visible', key===k ? 'true':'false');
-        if(nr) nr.setAttribute('visible', key===k ? 'true':'false');
-      });
-      Object.keys(db).forEach(key=>{
-        const fl=document.getElementById('floor-'+key);
-        if(fl){
-          if(key===k){fl.setAttribute('class','clickable floor-tile');fl.setAttribute('material','color:#18191d;opacity:0.001;');}
-          else{fl.removeAttribute('class');fl.setAttribute('material','color:#18191d;opacity:0;');}
-        }
-      });
-    }
-
-    window.onload=()=>{ build(); };
-  <\/script>
-</body>
-</html>`;
-
-    const expoFileName = (expoName || 'gallery').replace(/\s+/g,'_') + '_獨立網頁.html';
+    const expoFileName = (expoName || 'gallery').replace(/\s+/g,'_') + '_展覽.html';
     downloadBlob(html, expoFileName, 'text/html;charset=utf-8');
-    addVersionHistory('輸出獨立展覽檔'); showToast('✅ 獨立展覽網頁已順利匯出');
+    addVersionHistory('輸出獨立展覽檔');
+    showToast('✅ 獨立展覽檔已下載');
 }
 
-// 視窗事件載入
+// ══════════════════════════════════════════════
+// 初始化
+// ══════════════════════════════════════════════
 window.onload = () => {
-    build2DGridSystem(); buildRoomSelector(); buildRoomList();
-    loadWallData(); renderChecklist(); compileAndRender3D(); updateStats();
+    buildRoomSelector();
+    build2DGridSystem();
+    buildRoomList();
+    switchEditingRoom('A');
+    updateStats();
+    // 初始化動線（示範）
+    routeStops = [
+        {roomKey:'A', note:'青銅禮器廳｜建議停留20分鐘，毛公鼎銘文值得細讀'},
+        {roomKey:'C', note:'中央廊道｜索取導覽手冊，確認完整路線'},
+        {roomKey:'B', note:'北宋山水廳｜鎮院三寶，建議停留30分鐘以上'},
+        {roomKey:'E', note:'書法經典廳｜三大行書薈萃，書法愛好者必看'},
+        {roomKey:'D', note:'玉器工藝廳｜翠玉白菜、肉形石，最受歡迎展廳'},
+        {roomKey:'F', note:'陶瓷珍品廳｜汝窯天青釉，宋瓷之美'},
+        {roomKey:'G', note:'宮廷珍玩廳｜象牙套球、清宮工藝，壓軸展廳'},
+    ];
+    buildRouteUI();
+    compileAndRender3D();
 };
+</script>
+
+<!-- ═══ 全圖 Lightbox ═══ -->
+<div id="artwork-lightbox" onclick="closeLightbox(event)">
+    <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+    <div id="lightbox-meta">
+        <div id="lb-title" class="lb-title"></div>
+        <div id="lb-sub" class="lb-sub"></div>
+    </div>
+</div>
+
+<script>
+function openLightbox(imgSrc, title, sub) {
+    const lb = document.getElementById('artwork-lightbox');
+    const img = document.getElementById('lightbox-img');
+    document.getElementById('lb-title').innerHTML = title || '';
+    document.getElementById('lb-sub').textContent = sub || '';
+    img.src = imgSrc;
+    lb.classList.add('open');
+    document.addEventListener('keydown', lbKeyHandler);
+}
+function closeLightbox(e) {
+    if (e && e.target === document.getElementById('lightbox-img')) return;
+    document.getElementById('artwork-lightbox').classList.remove('open');
+    document.getElementById('lightbox-img').src = '';
+    document.removeEventListener('keydown', lbKeyHandler);
+}
+function lbKeyHandler(e) { if (e.key === 'Escape') closeLightbox(); }
 </script>
 </body>
 </html>
